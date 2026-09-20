@@ -3,7 +3,7 @@
 Platform pembelajaran kalkulus peubah banyak (multivariabel) berbasis AI untuk pendidikan tinggi.
 Dibangun sebagai **Proyek Akhir Praktikum Pemrograman Front-End** — D3 Teknik Informatika, Sekolah Vokasi UNS.
 
-> **Live deployment:** <https://visualmath-ai.vercel.app> _(tautan diisi setelah deploy di Vercel/Cloudflare — lihat Bab Deployment pada README bagian bawah)_
+> **Live deployment:** <https://visualmath-ai-phi.vercel.app>
 
 ---
 
@@ -57,10 +57,14 @@ src/proxy.ts      Middleware proteksi rute & peran
 
 ## Deployment (Edge Cloud)
 
-1. Push repo ini ke GitHub, lalu import di [Vercel](https://vercel.com) atau Cloudflare Workers.
-2. Framework preset: **Next.js** (Vercel otomatis mendeteksi `next.config.ts`).
-3. Set env `SESSION_SECRET` di dashboard Vercel → Environment Variables.
-4. Isi link live di bagian atas README ini.
+1. Repo ini sudah tersedia di GitHub: **https://github.com/briannnn327/visualmath-ai**.
+2. Di Vercel: buka [vercel.com/new](https://vercel.com) → Import `briannnn327/visualmath-ai` (auto-detect Next.js, set SESSION_SECRET), atau deploy dari CLI di folder ini:
+```bash
+cd visualmath-ai
+vercel --prod
+```
+3. Env production (opsional): `SESSION_SECRET` — jika kosong, dipakai default dev secret (cukup untuk demo).
+4. Verifikasi live: `https://visualmath-ai-phi.vercel.app`
 
 ## Kontribusi
 
