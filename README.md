@@ -64,4 +64,4 @@ src/proxy.ts      Middleware proteksi rute & peran
 
 ## Kontribusi
 
-Tim: Brian (bdkn), Maria. CRUD/hotfix via branch + Pull Request; CI otomatis menjalankan quality gate sebelum merge.
+Tim: Maria Teofani Evernita Sagala (V3925048), Yusuf Febriansyah (V3925058). CRUD/hotfix via branch + Pull Request; CI otomatis menjalankan quality gate sebelum merge.
