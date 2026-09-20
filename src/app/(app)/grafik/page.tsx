@@ -48,6 +48,7 @@ export default function GrafikPage() {
     await run();
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: efek sekali-jalan saat mount
   useEffect(() => {
     if (started.current) return;
     started.current = true;

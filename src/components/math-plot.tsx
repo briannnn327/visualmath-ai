@@ -123,6 +123,24 @@ export function MathPlot({
   const showXAxis = xMin <= 0 && xMax >= 0;
   const showYAxis = yMin <= 0 && yMax >= 0;
 
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (!interactive || !points || points.length === 0) return;
+    const [left, right] =
+      e.key === "ArrowLeft"
+        ? [-1, undefined]
+        : e.key === "ArrowRight"
+          ? [undefined, 1]
+          : [undefined, undefined];
+    const idx =
+      left !== undefined || right !== undefined
+        ? points.findIndex((p) => Math.abs(p.x - (hover?.x ?? Number.NEGATIVE_INFINITY)) < 1e-9)
+        : -1;
+    const step = (left ?? right ?? 0) as 1 | -1;
+    const target = idx === -1 ? 0 : Math.min(points.length - 1, Math.max(0, idx + step));
+    e.preventDefault();
+    setHover({ x: points[target].x, y: points[target].y });
+  };
+
   const hoverNearest = useMemo(() => {
     if (!hover || !points || points.length === 0) return null;
     let best = points[0];
@@ -147,6 +165,11 @@ export function MathPlot({
       style={{ width: "100%" }}
       onMouseMove={onMove}
       onMouseLeave={() => setHover(null)}
+      onKeyDown={onKeyDown}
+      /* biome-ignore lint/a11y/noNoninteractiveTabindex: widget menerima input keyboard panah */
+      tabIndex={0}
+      role="application"
+      aria-label="Grafik interaktif. Gunakan panah kiri/kanan untuk menjelajahi titik."
     >
       <svg
         viewBox={`0 0 ${W} ${height}`}

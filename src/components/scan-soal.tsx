@@ -205,11 +205,15 @@ export function ScanSoalCard() {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                <label className="block min-w-0 flex-1">
+                <label htmlFor="manual-topik" className="block min-w-0 flex-1">
                   <span className="mb-1 block text-sm font-semibold text-on-surface">
                     Salah tebak? Pilih topik manual
                   </span>
-                  <Select value={manualId} onChange={(e) => setManualId(e.target.value)}>
+                  <Select
+                    id="manual-topik"
+                    value={manualId}
+                    onChange={(e) => setManualId(e.target.value)}
+                  >
                     <option value="">Pakai hasil deteksi otomatis</option>
                     {(topics.data ?? []).map((t) => (
                       <option key={t.id} value={t.id}>

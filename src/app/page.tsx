@@ -57,7 +57,13 @@ function HeroPlot() {
             </Badge>
             <Badge variant="outline">turunan = 2x</Badge>
           </div>
-          <svg viewBox="0 0 320 200" className="h-auto w-full">
+          <svg
+            viewBox="0 0 320 200"
+            className="h-auto w-full"
+            role="img"
+            aria-label="Grafik f(x) = x² dan turunannya 2x"
+          >
+            <title>Grafik f(x) = x² dan turunannya 2x</title>
             <defs>
               <linearGradient id="plotFill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.25" />

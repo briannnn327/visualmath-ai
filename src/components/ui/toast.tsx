@@ -51,18 +51,19 @@ export function Toaster() {
   return (
     <div className="pointer-events-none fixed inset-x-0 top-4 z-[60] flex flex-col items-center gap-2 px-4">
       {toasts.map((t) => (
-        <div
+        <button
           key={t.id}
+          type="button"
           onClick={() => dismiss(t.id)}
+          aria-label={`Tutup notifikasi: ${t.message}`}
           className={cn(
-            "pointer-events-auto flex w-full max-w-sm cursor-pointer items-start gap-3 rounded-2xl px-4 py-3 shadow-float animate-fade-up",
+            "pointer-events-auto flex w-full max-w-sm cursor-pointer items-start gap-3 rounded-2xl px-4 py-3 text-left shadow-float animate-fade-up focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
             bgTone[t.kind],
           )}
-          role="status"
         >
           <Icon name={tone[t.kind].icon} className={cn("mt-0.5", tone[t.kind].ring)} size={18} />
-          <p className={cn("text-sm font-medium", tone[t.kind].text)}>{t.message}</p>
-        </div>
+          <span className={cn("text-sm font-medium", tone[t.kind].text)}>{t.message}</span>
+        </button>
       ))}
     </div>
   );

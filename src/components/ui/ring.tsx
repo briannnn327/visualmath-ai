@@ -30,7 +30,8 @@ export function Ring({
       className={cn("relative inline-flex items-center justify-center", className)}
       style={{ width: size, height: size }}
     >
-      <svg width={size} height={size} className="-rotate-90">
+      <svg width={size} height={size} className="-rotate-90" role="img" aria-label={`${pct}%`}>
+        <title>{`${pct}%`}</title>
         <defs>
           <linearGradient id={id} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="var(--color-primary)" />

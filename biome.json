@@ -29,6 +29,9 @@
 			"preset": "recommended",
 			"correctness": {
 				"noUnusedVariables": "error"
+			},
+			"suspicious": {
+				"noArrayIndexKey": "off"
 			}
 		}
 	},
@@ -40,19 +43,10 @@
 	},
 	"css": {
 		"parser": {
-			"tailwindDirectives": true,
-			"unknownAtRules": "ignore"
+			"tailwindDirectives": true
 		}
 	},
-	"overrides": [
-		{
-			"rules": {
-				"suspicious": {
-					"noArrayIndexKey": "off"
-				}
-			}
-		}
-	],
+	"overrides": [],
 	"assist": {
 		"enabled": true,
 		"actions": {
