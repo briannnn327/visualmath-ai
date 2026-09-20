@@ -18,7 +18,13 @@ const colors = {
   info: "bg-info",
 };
 
-export function Progress({ value, max = 100, color = "primary", className, showLabel }: ProgressProps) {
+export function Progress({
+  value,
+  max = 100,
+  color = "primary",
+  className,
+  showLabel,
+}: ProgressProps) {
   const pct = Math.max(0, Math.min(100, (value / Math.max(1, max)) * 100));
   return (
     <div className={cn("flex w-full items-center gap-2", className)}>

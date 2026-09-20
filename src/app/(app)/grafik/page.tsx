@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Icon } from "@/components/ui/icon";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { MathPlot } from "@/components/math-plot";
-import { useFormulaAnalyze } from "@/lib/hooks/queries";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Icon } from "@/components/ui/icon";
+import { Input } from "@/components/ui/input";
 import { useToastStore } from "@/components/ui/toast";
+import { useFormulaAnalyze } from "@/lib/hooks/queries";
 import type { FormulaAnalysis } from "@/lib/types";
 
 const presets = [
@@ -68,7 +68,10 @@ export default function GrafikPage() {
         <CardContent className="p-5">
           <form onSubmit={submit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1">
-              <label htmlFor="plot-expr" className="mb-1.5 block text-sm font-semibold text-on-surface">
+              <label
+                htmlFor="plot-expr"
+                className="mb-1.5 block text-sm font-semibold text-on-surface"
+              >
                 Ekspresi fungsi
               </label>
               <div className="flex gap-2">
@@ -110,7 +113,10 @@ export default function GrafikPage() {
           </div>
 
           {error && (
-            <p role="alert" className="mt-3 rounded-xl bg-error-container px-4 py-3 text-sm font-medium text-on-error-container">
+            <p
+              role="alert"
+              className="mt-3 rounded-xl bg-error-container px-4 py-3 text-sm font-medium text-on-error-container"
+            >
               {error}
             </p>
           )}
@@ -137,11 +143,21 @@ export default function GrafikPage() {
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <MiniStat label="Turunan" value={result.derivativePretty} mono />
-            <MiniStat label="Integral (rentang auto)" value={result.integral === null ? "—" : result.integralText} />
-            <MiniStat label="Akar" value={result.roots.map((r) => r.x.toFixed(2)).join(", ") || "—"} />
+            <MiniStat
+              label="Integral (rentang auto)"
+              value={result.integral === null ? "—" : result.integralText}
+            />
+            <MiniStat
+              label="Akar"
+              value={result.roots.map((r) => r.x.toFixed(2)).join(", ") || "—"}
+            />
             <MiniStat
               label="Ekstrem"
-              value={result.extrema.map((e) => `${e.kind === "min" ? "min" : "maks"}@${e.x.toFixed(2)}`).join(", ") || "—"}
+              value={
+                result.extrema
+                  .map((e) => `${e.kind === "min" ? "min" : "maks"}@${e.x.toFixed(2)}`)
+                  .join(", ") || "—"
+              }
             />
           </div>
         </>
@@ -162,12 +178,25 @@ export default function GrafikPage() {
   );
 }
 
-function MiniStat({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+function MiniStat({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
   return (
     <Card>
       <CardContent className="p-4">
-        <p className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">{label}</p>
-        <p className={`mt-1 truncate text-sm font-bold text-on-surface ${mono ? "math-mono" : ""}`} title={value}>
+        <p className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
+          {label}
+        </p>
+        <p
+          className={`mt-1 truncate text-sm font-bold text-on-surface ${mono ? "math-mono" : ""}`}
+          title={value}
+        >
           {value}
         </p>
       </CardContent>

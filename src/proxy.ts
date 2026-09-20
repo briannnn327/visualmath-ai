@@ -1,16 +1,9 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { getSession } from "@/lib/db/session";
 import type { Role } from "@/lib/types";
 
-const STUDENT_PATHS = [
-  "/dashboard",
-  "/ai-explainer",
-  "/grafik",
-  "/latihan",
-  "/riwayat",
-  "/profil",
-];
+const STUDENT_PATHS = ["/dashboard", "/ai-explainer", "/grafik", "/latihan", "/riwayat", "/profil"];
 const GUEST_ONLY = ["/login", "/register"];
 const DOSEN_PATHS = ["/dosen"];
 const ADMIN_PATHS = ["/admin"];

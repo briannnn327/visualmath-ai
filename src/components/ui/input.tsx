@@ -7,11 +7,11 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
       ref={ref}
       className={cn(
         "h-10 w-full rounded-xl border border-outline-variant bg-surface px-3.5 text-sm text-on-surface placeholder:text-on-surface-variant/60 transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 disabled:cursor-not-allowed disabled:opacity-50",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  ),
 );
 Input.displayName = "Input";
 

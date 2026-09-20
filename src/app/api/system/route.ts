@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { ensureSeeded, db } from "@/lib/db/store";
+import { NextResponse } from "next/server";
+import { db, ensureSeeded } from "@/lib/db/store";
 import { apiUser, forbidden, unauthorized } from "@/lib/server/api-auth";
 
 export async function GET(request: NextRequest) {
@@ -24,7 +24,9 @@ export async function GET(request: NextRequest) {
       warningsToday: logsToday.filter((l) => l.severity === "warning").length,
       avgResponseMs: 840 + Math.floor(Math.random() * 240),
       uptime: 99.98,
-      models: new Set(db.logs.filter((l) => l.action === "ai.configure").map(() => db.aiConfig?.model ?? "-")).size,
+      models: new Set(
+        db.logs.filter((l) => l.action === "ai.configure").map(() => db.aiConfig?.model ?? "-"),
+      ).size,
     };
     return NextResponse.json({ metrics });
   }

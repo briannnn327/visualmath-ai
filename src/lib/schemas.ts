@@ -13,26 +13,16 @@ const emailSchema = z.email("Format email tidak valid");
 
 export const loginSchema = z.object({
   email: emailSchema,
-  password: z
-    .string("Kata sandi wajib diisi")
-    .min(4, "Kata sandi minimal 4 karakter")
-    .max(128),
+  password: z.string("Kata sandi wajib diisi").min(4, "Kata sandi minimal 4 karakter").max(128),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
 
 export const registerSchema = z
   .object({
-    name: z
-      .string()
-      .trim()
-      .min(3, "Nama minimal 3 karakter")
-      .max(80, "Nama maksimal 80 karakter"),
+    name: z.string().trim().min(3, "Nama minimal 3 karakter").max(80, "Nama maksimal 80 karakter"),
     email: emailSchema,
-    password: z
-      .string()
-      .min(4, "Kata sandi minimal 4 karakter")
-      .max(128),
+    password: z.string().min(4, "Kata sandi minimal 4 karakter").max(128),
     confirmPassword: z.string(),
     role: roleSchema.default("mahasiswa"),
     nim: z.string().trim().max(20).optional(),
@@ -56,10 +46,7 @@ const expressionSchema = z
   .trim()
   .min(1, "Masukkan ekspresi fungsi terlebih dahulu")
   .max(120, "Ekspresi terlalu panjang")
-  .regex(
-    /^[0-9a-zA-Z+\-*/^().,\s]*$/,
-    "Karakter yang diizinkan: angka, huruf, + - * / ^ ( )"
-  );
+  .regex(/^[0-9a-zA-Z+\-*/^().,\s]*$/, "Karakter yang diizinkan: angka, huruf, + - * / ^ ( )");
 
 export const formulaInputSchema = z.object({
   expression: expressionSchema,

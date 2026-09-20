@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { type FormEvent, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input, Field } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
+import { Field, Input } from "@/components/ui/input";
 import { SkeletonCard } from "@/components/ui/skeleton";
-import { useProfile, useUpdateProfile } from "@/lib/hooks/queries";
 import { useToastStore } from "@/components/ui/toast";
-import { formatNumber } from "@/lib/utils";
+import { useProfile, useUpdateProfile } from "@/lib/hooks/queries";
 import { roleLabel } from "@/lib/schemas";
 import type { PublicUser } from "@/lib/types";
+import { formatNumber } from "@/lib/utils";
 
 function initials(user: PublicUser) {
   return user.name
@@ -48,7 +48,12 @@ export default function ProfilPage() {
       return;
     }
     try {
-      await update.mutateAsync({ name, nim: nim || undefined, prodi: prodi || undefined, password: password || undefined });
+      await update.mutateAsync({
+        name,
+        nim: nim || undefined,
+        prodi: prodi || undefined,
+        password: password || undefined,
+      });
       setPassword("");
       setDirty(false);
       pushToast("success", "Profil berhasil diperbarui");
@@ -61,18 +66,23 @@ export default function ProfilPage() {
   if (profile.isError || !user) {
     return (
       <Card>
-        <CardContent className="p-6 text-sm text-error">{profile.error?.message ?? "Gagal memuat profil"}</CardContent>
+        <CardContent className="p-6 text-sm text-error">
+          {profile.error?.message ?? "Gagal memuat profil"}
+        </CardContent>
       </Card>
     );
   }
 
-  if (!dirty && (name !== user.name || nim !== (user.nim ?? "") || prodi !== (user.prodi ?? ""))) fill(user);
+  if (!dirty && (name !== user.name || nim !== (user.nim ?? "") || prodi !== (user.prodi ?? "")))
+    fill(user);
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-display text-2xl font-extrabold text-on-surface">Profil</h2>
-        <p className="mt-1 text-sm text-on-surface-variant">Kelola identitas dan kata sandi akunmu.</p>
+        <p className="mt-1 text-sm text-on-surface-variant">
+          Kelola identitas dan kata sandi akunmu.
+        </p>
       </div>
 
       <Card>
@@ -134,17 +144,21 @@ export default function ProfilPage() {
                   <div
                     key={row.userId}
                     className={
-                      me
-                        ? "rounded-xl bg-primary-container px-3 py-2"
-                        : "rounded-xl px-3 py-2"
+                      me ? "rounded-xl bg-primary-container px-3 py-2" : "rounded-xl px-3 py-2"
                     }
                   >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-sm font-semibold text-on-surface">
                         {i + 1}. {me ? "Kamu" : "—"}
-                        {me && <Badge className="ms-2" variant="primary">Kamu</Badge>}
+                        {me && (
+                          <Badge className="ms-2" variant="primary">
+                            Kamu
+                          </Badge>
+                        )}
                       </span>
-                      <span className="font-display text-sm font-bold tabular text-on-surface">{row.avg}%</span>
+                      <span className="font-display text-sm font-bold tabular text-on-surface">
+                        {row.avg}%
+                      </span>
                     </div>
                     <div className="mt-1.5 h-1.5 rounded-full bg-surface-container-high">
                       <div

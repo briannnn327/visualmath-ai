@@ -5,6 +5,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { AIConfigInput, MaterialInput, UserAdminInput } from "@/lib/schemas";
 import { api, qs } from "@/lib/services/api";
 import type {
   ActivityLog,
@@ -20,7 +21,6 @@ import type {
   Question,
   Topic,
 } from "@/lib/types";
-import type { AIConfigInput, MaterialInput, UserAdminInput } from "@/lib/schemas";
 
 /* ---------- Tipe pengembalian API ---------- */
 
@@ -72,8 +72,12 @@ export function useTopics() {
 export function useFormulaAnalyze() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { expression: string; variable?: string; topicId?: string; title?: string }) =>
-      api.post<{ analysis: FormulaAnalysis; record: FormulaRecord }>("/api/formulas", input),
+    mutationFn: (input: {
+      expression: string;
+      variable?: string;
+      topicId?: string;
+      title?: string;
+    }) => api.post<{ analysis: FormulaAnalysis; record: FormulaRecord }>("/api/formulas", input),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["formula-history"] });
     },
@@ -98,7 +102,7 @@ export function useQuestion(topicId: string | null, difficulty: Difficulty, enab
     queryKey: ["question", topicId, difficulty],
     queryFn: async () =>
       api.get<{ question: SafeQuestion | null; difficultyOrder: Difficulty[] }>(
-        qs("/api/exercises", { topicId: topicId ?? undefined, difficulty })
+        qs("/api/exercises", { topicId: topicId ?? undefined, difficulty }),
       ),
     enabled: enabled && Boolean(topicId),
   });
@@ -134,7 +138,7 @@ export function useMaterials(kelasId: string | null = null) {
     queryKey: ["materials", kelasId ?? "all"],
     queryFn: async () => {
       const { materials } = await api.get<{ materials: MaterialWithMeta[] }>(
-        qs("/api/materials", { kelasId: kelasId ?? undefined })
+        qs("/api/materials", { kelasId: kelasId ?? undefined }),
       );
       return materials;
     },
@@ -144,7 +148,8 @@ export function useMaterials(kelasId: string | null = null) {
 export function useCreateMaterial() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: MaterialInput) => api.post<{ material: MaterialWithMeta }>("/api/materials", input),
+    mutationFn: (input: MaterialInput) =>
+      api.post<{ material: MaterialWithMeta }>("/api/materials", input),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["materials"] });
     },
@@ -190,7 +195,7 @@ export function useClassRoster(kelasId: string | null) {
     enabled: !!kelasId,
     queryFn: async () => {
       const { roster } = await api.get<{ roster: RosterRowPublic[] }>(
-        qs("/api/classes", { detail: kelasId ?? undefined })
+        qs("/api/classes", { detail: kelasId ?? undefined }),
       );
       return roster;
     },
@@ -312,7 +317,7 @@ export function useSystemLogs(severity?: string) {
     queryKey: ["system-logs", severity ?? "all"],
     queryFn: async () => {
       const { logs } = await api.get<{ logs: ActivityLog[] }>(
-        qs("/api/system", { q: "logs", severity: severity ?? undefined })
+        qs("/api/system", { q: "logs", severity: severity ?? undefined }),
       );
       return logs;
     },

@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VisualMath AI
 
-## Getting Started
+Platform pembelajaran kalkulus peubah banyak (multivariabel) berbasis AI untuk pendidikan tinggi.
+Dibangun sebagai **Proyek Akhir Praktikum Pemrograman Front-End** — D3 Teknik Informatika, Sekolah Vokasi UNS.
 
-First, run the development server:
+> **Live deployment:** <https://visualmath-ai.vercel.app> _(tautan diisi setelah deploy di Vercel/Cloudflare — lihat Bab Deployment pada README bagian bawah)_
+
+---
+
+## Fitur (sesuai SRS)
+
+| Modul | Fitur |
+|---|---|
+| Mahasiswa | Landing, registrasi/login, dashboard, **AI Math Explainer** (solusi langkah demi langkah), grafik interaktif (SVG), latihan adaptif, riwayat & progres, profil, **scan foto soal** |
+| Dosen | Manajemen kelas (roster), materi, progres mahasiswa |
+| Admin | Manajemen pengguna, monitoring sistem, konfigurasi AI |
+
+## Teknologi
+
+- **Meta-framework:** Next.js 16.3.5 (App Router, React Server Components, Turbopack, React Compiler aktif)
+- **UI:** React 19.2.8, Tailwind CSS **v4** (zero-runtime, Oxide Engine), CVA + Tailwind Merge, komponen headless custom
+- **State:** Zustand 5 (client UI state), TanStack Query v5 (server state)
+- **Data/type:** TypeScript strict + **Zod 4** runtime validation, REST via route handlers (BFF)
+- **Toolchain:** Vite/Rolldown demo (Modul 8), Biome, ESLint (eslint-config-next)
+- **Visualisasi:** SVG interaktif + Recharts
+
+## Menjalankan
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # lalu isi SESSION_SECRET
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Akun demo (seed): mahasiswa `maria@students.uns.ac.id/maria123`, dosen `dosen@visualmath.ai/dosen123`, admin `admin@visualmath.ai/admin123`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Kualitas & CI
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint          # ESLint (eslint-config-next)
+npx biome check ./src # Biome (Rust) — 0 error
+npx tsc --noEmit      # TypeScript strict
+npm run build         # Next build (Turbopack)
+```
 
-## Learn More
+Pipeline CI/CD: `.github/workflows/ci.yml` (lint → Biome → typecheck → build → SonarQube Cloud scan).
+Quality gate SonarQube: `sonar-project.properties`.
 
-To learn more about Next.js, take a look at the following resources:
+## Struktur singkat
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/app/          App Router: (app) mahasiswa, dosen/, admin/, api/ (route handlers)
+src/components/   UI primitif (cva) + fitur (math-plot, scan-soal, layout)
+src/lib/          store/ (Zustand), hooks/ (TanStack Query), services/ (REST), db/ (in-memory + session)
+src/proxy.ts      Middleware proteksi rute & peran
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment (Edge Cloud)
 
-## Deploy on Vercel
+1. Push repo ini ke GitHub, lalu import di [Vercel](https://vercel.com) atau Cloudflare Workers.
+2. Framework preset: **Next.js** (Vercel otomatis mendeteksi `next.config.ts`).
+3. Set env `SESSION_SECRET` di dashboard Vercel → Environment Variables.
+4. Isi link live di bagian atas README ini.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Kontribusi
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Tim: Brian (bdkn), Maria. CRUD/hotfix via branch + Pull Request; CI otomatis menjalankan quality gate sebelum merge.

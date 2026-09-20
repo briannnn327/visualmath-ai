@@ -1,9 +1,8 @@
 "use client";
 
 import { create } from "zustand";
-import { cn } from "@/lib/utils";
 import { Icon, type IconName } from "@/components/ui/icon";
-import { uid } from "@/lib/utils";
+import { cn, uid } from "@/lib/utils";
 
 export type ToastKind = "success" | "error" | "info" | "warning";
 
@@ -57,7 +56,7 @@ export function Toaster() {
           onClick={() => dismiss(t.id)}
           className={cn(
             "pointer-events-auto flex w-full max-w-sm cursor-pointer items-start gap-3 rounded-2xl px-4 py-3 shadow-float animate-fade-up",
-            bgTone[t.kind]
+            bgTone[t.kind],
           )}
           role="status"
         >

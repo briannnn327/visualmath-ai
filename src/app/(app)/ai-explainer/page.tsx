@@ -1,20 +1,20 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input, Field } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Icon } from "@/components/ui/icon";
+import { type FormEvent, useState } from "react";
 import { MathPlot } from "@/components/math-plot";
 import { ScanSoalCard } from "@/components/scan-soal";
-import { useFormulaAnalyze, useFormulaHistory, useTopics } from "@/lib/hooks/queries";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Icon } from "@/components/ui/icon";
+import { Field, Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToastStore } from "@/components/ui/toast";
-import { formatDate } from "@/lib/utils";
+import { useFormulaAnalyze, useFormulaHistory, useTopics } from "@/lib/hooks/queries";
 import type { FormulaAnalysis } from "@/lib/types";
+import { formatDate } from "@/lib/utils";
 
 const presets = [
   { label: "x²", value: "x^2" },
@@ -61,7 +61,8 @@ export default function AIExplainerPage() {
       <div>
         <h2 className="font-display text-2xl font-extrabold text-on-surface">AI Step Explainer</h2>
         <p className="mt-1 text-sm text-on-surface-variant">
-          Masukkan fungsi, lalu AI menghitung turunan, akar, ekstrem, integral numerik, dan langkah penyelesaiannya.
+          Masukkan fungsi, lalu AI menghitung turunan, akar, ekstrem, integral numerik, dan langkah
+          penyelesaiannya.
         </p>
       </div>
 
@@ -71,7 +72,12 @@ export default function AIExplainerPage() {
         <CardContent className="p-5">
           <form onSubmit={submit} className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Field label="Ekspresi fungsi" htmlFor="expr" className="flex-1" hint="Contoh: 3x^2 + 2x - 1, sin(x), 1/x, e^x, ln(x)">
+              <Field
+                label="Ekspresi fungsi"
+                htmlFor="expr"
+                className="flex-1"
+                hint="Contoh: 3x^2 + 2x - 1, sin(x), 1/x, e^x, ln(x)"
+              >
                 <div className="flex gap-2">
                   <Input
                     id="expr"
@@ -110,7 +116,9 @@ export default function AIExplainerPage() {
             </div>
 
             <div className="flex flex-wrap gap-1.5">
-              <span className="me-1 self-center text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Cepat:</span>
+              <span className="me-1 self-center text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+                Cepat:
+              </span>
               {presets.map((p) => (
                 <button
                   key={p.value}
@@ -124,7 +132,10 @@ export default function AIExplainerPage() {
             </div>
 
             {error && (
-              <p role="alert" className="rounded-xl bg-error-container px-4 py-3 text-sm font-medium text-on-error-container">
+              <p
+                role="alert"
+                className="rounded-xl bg-error-container px-4 py-3 text-sm font-medium text-on-error-container"
+              >
                 {error}
               </p>
             )}
@@ -154,7 +165,9 @@ export default function AIExplainerPage() {
               <CardHeader className="flex-row items-center justify-between">
                 <div>
                   <CardTitle>Grafik Fungsi</CardTitle>
-                  <CardDescription className="math-mono">f(x) = {result.pretty} · f′(x) = {result.derivativePretty}</CardDescription>
+                  <CardDescription className="math-mono">
+                    f(x) = {result.pretty} · f′(x) = {result.derivativePretty}
+                  </CardDescription>
                 </div>
                 <Badge variant="primary">Interaktif</Badge>
               </CardHeader>
@@ -180,7 +193,9 @@ export default function AIExplainerPage() {
               </CardHeader>
               <CardContent className="space-y-4 pt-5">
                 <div className="rounded-2xl border border-outline-variant bg-surface p-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">Aturan yang dipakai</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">
+                    Aturan yang dipakai
+                  </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {result.rulesUsed.length === 0 && <Badge variant="outline">Konstanta</Badge>}
                     {result.rulesUsed.map((r) => (
@@ -192,28 +207,58 @@ export default function AIExplainerPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <ResultStat label="Integral numerik" value={result.integral === null ? "—" : result.integralText} tone="text-primary" />
-                  <ResultStat label="Akar" value={`${result.roots.length} titik`} tone="text-secondary" />
-                  <ResultStat label="Ekstrem" value={`${result.extrema.length} titik`} tone="text-tertiary" />
-                  <ResultStat label="Variabel" value={result.variable} tone="text-on-surface-variant" />
+                  <ResultStat
+                    label="Integral numerik"
+                    value={result.integral === null ? "—" : result.integralText}
+                    tone="text-primary"
+                  />
+                  <ResultStat
+                    label="Akar"
+                    value={`${result.roots.length} titik`}
+                    tone="text-secondary"
+                  />
+                  <ResultStat
+                    label="Ekstrem"
+                    value={`${result.extrema.length} titik`}
+                    tone="text-tertiary"
+                  />
+                  <ResultStat
+                    label="Variabel"
+                    value={result.variable}
+                    tone="text-on-surface-variant"
+                  />
                 </div>
 
                 <div className="space-y-2">
                   {result.roots.map((r, i) => (
-                    <p key={`r${i}`} className="flex items-center gap-2 text-sm text-on-surface-variant">
+                    <p
+                      key={`r${i}`}
+                      className="flex items-center gap-2 text-sm text-on-surface-variant"
+                    >
                       <Icon name="check-circle" size={15} className="text-secondary" />
-                      Akar di <span className="math-mono font-semibold text-on-surface">x ≈ {r.x.toFixed(3)}</span> (f = {r.y.toFixed(3)})
+                      Akar di{" "}
+                      <span className="math-mono font-semibold text-on-surface">
+                        x ≈ {r.x.toFixed(3)}
+                      </span>{" "}
+                      (f = {r.y.toFixed(3)})
                     </p>
                   ))}
                   {result.extrema.map((e, i) => (
-                    <p key={`e${i}`} className="flex items-center gap-2 text-sm text-on-surface-variant">
+                    <p
+                      key={`e${i}`}
+                      className="flex items-center gap-2 text-sm text-on-surface-variant"
+                    >
                       <Icon name="award" size={15} className="text-tertiary" />
                       {e.kind === "min" ? "Minimum" : "Maksimum"} lokal di x ≈{" "}
-                      <span className="math-mono font-semibold text-on-surface">{e.x.toFixed(3)}</span>
+                      <span className="math-mono font-semibold text-on-surface">
+                        {e.x.toFixed(3)}
+                      </span>
                     </p>
                   ))}
                   {result.roots.length === 0 && result.extrema.length === 0 && (
-                    <p className="text-sm text-on-surface-variant">Tidak ada akar atau ekstrem dalam rentang plot.</p>
+                    <p className="text-sm text-on-surface-variant">
+                      Tidak ada akar atau ekstrem dalam rentang plot.
+                    </p>
                   )}
                 </div>
               </CardContent>
@@ -256,7 +301,9 @@ export default function AIExplainerPage() {
                   <CardDescription>Deskripsi konsep dari mesin analisis.</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-5">
-                  <p className="text-sm leading-relaxed text-on-surface-variant">{result.explanation}</p>
+                  <p className="text-sm leading-relaxed text-on-surface-variant">
+                    {result.explanation}
+                  </p>
                 </CardContent>
               </Card>
 
@@ -266,7 +313,12 @@ export default function AIExplainerPage() {
                     <CardTitle>Riwayat Analisis</CardTitle>
                     <CardDescription>Ekspresi yang pernah kamu analisis.</CardDescription>
                   </div>
-                  <Button variant="ghost" size="icon-sm" onClick={() => history.refetch()} aria-label="Muat ulang">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => history.refetch()}
+                    aria-label="Muat ulang"
+                  >
                     <Icon name="refresh" size={16} />
                   </Button>
                 </CardHeader>
@@ -278,12 +330,18 @@ export default function AIExplainerPage() {
                       onClick={() => setExpression(r.expression)}
                       className="flex w-full items-center justify-between gap-2 rounded-xl p-2 text-left transition-colors hover:bg-surface-container"
                     >
-                      <span className="min-w-0 flex-1 truncate font-mono text-sm text-on-surface">{r.display}</span>
-                      <span className="shrink-0 text-[11px] text-on-surface-variant">{formatDate(r.createdAt)}</span>
+                      <span className="min-w-0 flex-1 truncate font-mono text-sm text-on-surface">
+                        {r.display}
+                      </span>
+                      <span className="shrink-0 text-[11px] text-on-surface-variant">
+                        {formatDate(r.createdAt)}
+                      </span>
                     </button>
                   ))}
                   {(history.data ?? []).length === 0 && (
-                    <p className="text-sm text-on-surface-variant">Belum ada riwayat. Coba analisis pertama kamu!</p>
+                    <p className="text-sm text-on-surface-variant">
+                      Belum ada riwayat. Coba analisis pertama kamu!
+                    </p>
                   )}
                 </CardContent>
               </Card>
@@ -298,10 +356,12 @@ export default function AIExplainerPage() {
             <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary-container text-on-primary-container">
               <Icon name="sparkle" size={26} />
             </span>
-            <h3 className="font-display text-lg font-bold text-on-surface">Analisis pertamamu menunggu</h3>
+            <h3 className="font-display text-lg font-bold text-on-surface">
+              Analisis pertamamu menunggu
+            </h3>
             <p className="max-w-md text-sm text-on-surface-variant">
-              Ketik ekspresi fungsi di atas (mis. <span className="math-mono">3x^2 + 2x - 1</span>) lalu tekan Analisis untuk melihat
-              turunan, langkah penyelesaian, dan grafiknya.
+              Ketik ekspresi fungsi di atas (mis. <span className="math-mono">3x^2 + 2x - 1</span>)
+              lalu tekan Analisis untuk melihat turunan, langkah penyelesaian, dan grafiknya.
             </p>
           </CardContent>
         </Card>
@@ -313,7 +373,9 @@ export default function AIExplainerPage() {
 function ResultStat({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
     <div className="rounded-2xl border border-outline-variant bg-surface p-3.5">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">{label}</p>
+      <p className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
+        {label}
+      </p>
       <p className={`mt-0.5 truncate font-mono text-sm font-bold ${tone}`}>{value}</p>
     </div>
   );

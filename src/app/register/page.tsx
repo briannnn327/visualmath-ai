@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { type FormEvent, useState } from "react";
 import { Logo } from "@/components/brand";
+import { homeFor } from "@/components/layout/nav";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { Input, Field } from "@/components/ui/input";
-import { useAuthStore, type RegisterPayload } from "@/lib/store/authStore";
+import { Field, Input } from "@/components/ui/input";
 import { useToastStore } from "@/components/ui/toast";
-import { homeFor } from "@/components/layout/nav";
+import { type RegisterPayload, useAuthStore } from "@/lib/store/authStore";
 import type { Role } from "@/lib/types";
 
 export default function RegisterPage() {
@@ -73,7 +73,10 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          <form onSubmit={submit} className="space-y-4 rounded-3xl border border-outline-variant bg-surface p-6 shadow-card">
+          <form
+            onSubmit={submit}
+            className="space-y-4 rounded-3xl border border-outline-variant bg-surface p-6 shadow-card"
+          >
             <Field label="Nama Lengkap" htmlFor="name" required>
               <Input
                 id="name"
@@ -96,7 +99,10 @@ export default function RegisterPage() {
               />
             </Field>
 
-            <Field label="Peran" hint="Dosen mengelola kelas dan materi; mahasiswa belajar & berlatih.">
+            <Field
+              label="Peran"
+              hint="Dosen mengelola kelas dan materi; mahasiswa belajar & berlatih."
+            >
               <div className="grid grid-cols-2 gap-2">
                 {(["mahasiswa", "dosen"] as Role[]).map((r) => (
                   <button
@@ -119,10 +125,20 @@ export default function RegisterPage() {
             {(role === "mahasiswa" || nim || true) && (
               <div className="grid grid-cols-2 gap-3">
                 <Field label="NIM" htmlFor="nim">
-                  <Input id="nim" placeholder="V3925xxx" value={nim} onChange={(e) => setNim(e.target.value)} />
+                  <Input
+                    id="nim"
+                    placeholder="V3925xxx"
+                    value={nim}
+                    onChange={(e) => setNim(e.target.value)}
+                  />
                 </Field>
                 <Field label="Program Studi" htmlFor="prodi">
-                  <Input id="prodi" placeholder="D3 Teknik Informatika" value={prodi} onChange={(e) => setProdi(e.target.value)} />
+                  <Input
+                    id="prodi"
+                    placeholder="D3 Teknik Informatika"
+                    value={prodi}
+                    onChange={(e) => setProdi(e.target.value)}
+                  />
                 </Field>
               </div>
             )}
@@ -161,7 +177,10 @@ export default function RegisterPage() {
             </Field>
 
             {error && (
-              <p role="alert" className="rounded-xl bg-error-container px-4 py-3 text-sm font-medium text-on-error-container">
+              <p
+                role="alert"
+                className="rounded-xl bg-error-container px-4 py-3 text-sm font-medium text-on-error-container"
+              >
                 {error}
               </p>
             )}

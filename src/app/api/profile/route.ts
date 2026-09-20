@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { profileSchema, parseBody, type ProfileInput } from "@/lib/schemas";
+import { NextResponse } from "next/server";
 import { db, ensureSeeded, recordActivity } from "@/lib/db/store";
+import { type ProfileInput, parseBody, profileSchema } from "@/lib/schemas";
 import { apiUser, badRequest, toPublicUser, unauthorized } from "@/lib/server/api-auth";
 
 export async function GET(request: NextRequest) {
@@ -53,6 +53,12 @@ export async function PATCH(request: NextRequest) {
   user.prodi = input.prodi;
   if (input.password) user.password = input.password;
 
-  recordActivity({ userId: user.id, actorName: user.name, action: "profile.update", target: "Profil", severity: "info" });
+  recordActivity({
+    userId: user.id,
+    actorName: user.name,
+    action: "profile.update",
+    target: "Profil",
+    severity: "info",
+  });
   return NextResponse.json({ user: toPublicUser(user) });
 }

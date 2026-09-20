@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { loginSchema } from "@/lib/schemas";
 import { createSession } from "@/lib/db/session";
 import { ensureSeeded, findUserByEmail, recordActivity } from "@/lib/db/store";
-import { toPublicUser, badRequest } from "@/lib/server/api-auth";
+import { loginSchema } from "@/lib/schemas";
+import { badRequest, toPublicUser } from "@/lib/server/api-auth";
 
 export async function POST(request: Request) {
   ensureSeeded();

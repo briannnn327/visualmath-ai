@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 import { addHistory, ensureSeeded, getTopicById, recordActivity } from "@/lib/db/store";
 import { apiUser, badRequest, unauthorized } from "@/lib/server/api-auth";

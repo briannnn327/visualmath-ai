@@ -1,19 +1,22 @@
-import { forwardRef, type ButtonHTMLAttributes } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "@/lib/utils";
+import { type ButtonHTMLAttributes, forwardRef } from "react";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 rounded-full font-display font-semibold transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.98] whitespace-nowrap select-none",
   {
     variants: {
       variant: {
-        primary: "bg-brand-gradient text-on-primary shadow-soft hover:shadow-float hover:brightness-105",
+        primary:
+          "bg-brand-gradient text-on-primary shadow-soft hover:shadow-float hover:brightness-105",
         secondary: "bg-secondary text-white shadow-soft hover:bg-secondary-hover",
         tertiary:
           "bg-transparent text-primary ring-1 ring-inset ring-primary/40 hover:bg-primary-lighter",
-        outline: "bg-transparent text-on-surface ring-1 ring-inset ring-outline-variant hover:bg-surface-container",
-        ghost: "bg-transparent text-on-surface-variant hover:bg-surface-container hover:text-on-surface",
+        outline:
+          "bg-transparent text-on-surface ring-1 ring-inset ring-outline-variant hover:bg-surface-container",
+        ghost:
+          "bg-transparent text-on-surface-variant hover:bg-surface-container hover:text-on-surface",
         danger: "bg-error text-white shadow-soft hover:brightness-105",
         success: "bg-success text-white shadow-soft hover:brightness-105",
         warning: "bg-warning text-white shadow-soft hover:brightness-105",
@@ -28,7 +31,7 @@ const buttonVariants = cva(
       },
     },
     defaultVariants: { variant: "primary", size: "md" },
-  }
+  },
 );
 
 export interface ButtonProps
@@ -53,7 +56,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       )}
       {children}
     </button>
-  )
+  ),
 );
 Button.displayName = "Button";
 

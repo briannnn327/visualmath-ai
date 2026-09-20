@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/utils";
 
 /** Logo VisualMath AI — aman dipakai dari Server & Client Component. */
 export function Logo({

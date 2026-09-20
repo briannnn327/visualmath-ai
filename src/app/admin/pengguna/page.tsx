@@ -1,27 +1,27 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
-import {
-  useAdminUsers,
-  useCreateUser,
-  useUpdateUser,
-  useDeleteUser,
-  useClasses,
-  type AdminUser,
-} from "@/lib/hooks/queries";
-import { useAuthStore } from "@/lib/store/authStore";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input, Field } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Modal } from "@/components/ui/modal";
+import { type FormEvent, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
+import { Field, Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+import { Select } from "@/components/ui/select";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { useToastStore } from "@/components/ui/toast";
+import {
+  type AdminUser,
+  useAdminUsers,
+  useClasses,
+  useCreateUser,
+  useDeleteUser,
+  useUpdateUser,
+} from "@/lib/hooks/queries";
 import { roleLabel } from "@/lib/schemas";
-import { initials, formatDate } from "@/lib/utils";
+import { useAuthStore } from "@/lib/store/authStore";
 import type { Role } from "@/lib/types";
+import { formatDate, initials } from "@/lib/utils";
 
 type FilterKey = "semua" | Role;
 
@@ -314,9 +314,7 @@ export default function AdminPenggunaPage() {
         onClose={closeModal}
         title={editing ? "Edit Pengguna" : "Tambah Pengguna"}
         description={
-          editing
-            ? `Perbarui data ${editing.name}.`
-            : "Isi data untuk membuat akun pengguna baru."
+          editing ? `Perbarui data ${editing.name}.` : "Isi data untuk membuat akun pengguna baru."
         }
         size="md"
       >

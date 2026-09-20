@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useAuthStore } from "@/lib/store/authStore";
+import { type ReactNode, useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toast";
+import { useAuthStore } from "@/lib/store/authStore";
 import type { PublicUser } from "@/lib/types";
 
 function AuthHydrate({ user }: { user: PublicUser | null }) {
@@ -21,7 +21,7 @@ export function Providers({ children, user }: { children: ReactNode; user: Publi
         defaultOptions: {
           queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false },
         },
-      })
+      }),
   );
 
   return (

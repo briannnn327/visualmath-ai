@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 function niceStep(range: number, target = 8): number {
   const raw = range / target;
-  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const mag = 10 ** Math.floor(Math.log10(raw));
   const norm = raw / mag;
   const step = norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10;
   return step * mag;
@@ -140,29 +140,80 @@ export function MathPlot({
   return (
     <div
       ref={svgWrap}
-      className={cn("relative overflow-hidden rounded-2xl border border-outline-variant bg-surface", className)}
+      className={cn(
+        "relative overflow-hidden rounded-2xl border border-outline-variant bg-surface",
+        className,
+      )}
       style={{ width: "100%" }}
       onMouseMove={onMove}
       onMouseLeave={() => setHover(null)}
     >
-      <svg viewBox={`0 0 ${W} ${height}`} className="block w-full" role="img" aria-label={expressionLabel ?? "Grafik fungsi matematika"}>
+      <svg
+        viewBox={`0 0 ${W} ${height}`}
+        className="block w-full"
+        role="img"
+        aria-label={expressionLabel ?? "Grafik fungsi matematika"}
+      >
         {/* grid */}
         {yTicks.map((v) => (
-          <line key={`gy${v}`} x1={M} x2={W - R} y1={sy(v)} y2={sy(v)} stroke="var(--color-outline-variant)" strokeDasharray="3 4" strokeWidth={1} />
+          <line
+            key={`gy${v}`}
+            x1={M}
+            x2={W - R}
+            y1={sy(v)}
+            y2={sy(v)}
+            stroke="var(--color-outline-variant)"
+            strokeDasharray="3 4"
+            strokeWidth={1}
+          />
         ))}
         {xTicks.map((v) => (
-          <line key={`gx${v}`} x1={sx(v)} x2={sx(v)} y1={T} y2={T + plotH} stroke="var(--color-outline-variant)" strokeDasharray="3 4" strokeWidth={1} />
+          <line
+            key={`gx${v}`}
+            x1={sx(v)}
+            x2={sx(v)}
+            y1={T}
+            y2={T + plotH}
+            stroke="var(--color-outline-variant)"
+            strokeDasharray="3 4"
+            strokeWidth={1}
+          />
         ))}
 
         {/* sumbu */}
-        {showYAxis && <line x1={xZero} x2={xZero} y1={T} y2={T + plotH} stroke="var(--color-on-surface-variant)" strokeWidth={1.4} />}
-        {showXAxis && <line x1={M} x2={W - R} y1={yZero} y2={yZero} stroke="var(--color-on-surface-variant)" strokeWidth={1.4} />}
+        {showYAxis && (
+          <line
+            x1={xZero}
+            x2={xZero}
+            y1={T}
+            y2={T + plotH}
+            stroke="var(--color-on-surface-variant)"
+            strokeWidth={1.4}
+          />
+        )}
+        {showXAxis && (
+          <line
+            x1={M}
+            x2={W - R}
+            y1={yZero}
+            y2={yZero}
+            stroke="var(--color-on-surface-variant)"
+            strokeWidth={1.4}
+          />
+        )}
 
         {/* label tick */}
         {xTicks.map((v) => {
           const nearZero = Math.abs(v) < 1e-9;
           return (
-            <text key={`tx${v}`} x={sx(v)} y={height - 10} textAnchor="middle" fontSize={11} fill="var(--color-on-surface-variant)">
+            <text
+              key={`tx${v}`}
+              x={sx(v)}
+              y={height - 10}
+              textAnchor="middle"
+              fontSize={11}
+              fill="var(--color-on-surface-variant)"
+            >
               {nearZero ? "0" : fmtTick(v)}
             </text>
           );
@@ -170,7 +221,14 @@ export function MathPlot({
         {yTicks.map((v) => {
           const nearZero = Math.abs(v) < 1e-9;
           return (
-            <text key={`ty${v}`} x={M - 8} y={sy(v) + 4} textAnchor="end" fontSize={11} fill="var(--color-on-surface-variant)">
+            <text
+              key={`ty${v}`}
+              x={M - 8}
+              y={sy(v) + 4}
+              textAnchor="end"
+              fontSize={11}
+              fill="var(--color-on-surface-variant)"
+            >
               {nearZero ? "0" : fmtTick(v)}
             </text>
           );
@@ -192,21 +250,48 @@ export function MathPlot({
 
         {/* kurva fungsi */}
         {segments.map((seg, i) => (
-          <polyline key={`f${i}`} points={lineFor(seg.points)} fill="none" stroke="var(--color-primary)" strokeWidth={2.4} strokeLinejoin="round" />
+          <polyline
+            key={`f${i}`}
+            points={lineFor(seg.points)}
+            fill="none"
+            stroke="var(--color-primary)"
+            strokeWidth={2.4}
+            strokeLinejoin="round"
+          />
         ))}
 
         {/* akar */}
         {(roots ?? []).map((r, i) => (
           <g key={`r${i}`}>
-            <circle cx={sx(r.x)} cy={sy(r.y)} r={5} fill="var(--color-surface)" stroke="var(--color-secondary)" strokeWidth={2} />
+            <circle
+              cx={sx(r.x)}
+              cy={sy(r.y)}
+              r={5}
+              fill="var(--color-surface)"
+              stroke="var(--color-secondary)"
+              strokeWidth={2}
+            />
           </g>
         ))}
 
         {/* ekstrem */}
         {(extrema ?? []).map((e, i) => (
           <g key={`e${i}`}>
-            <circle cx={sx(e.x)} cy={sy(e.y)} r={5.5} fill="var(--color-tertiary)" stroke="var(--color-surface)" strokeWidth={2} />
-            <text x={sx(e.x) + 8} y={sy(e.y) - 8} fontSize={11} fontWeight={700} fill="var(--color-tertiary)">
+            <circle
+              cx={sx(e.x)}
+              cy={sy(e.y)}
+              r={5.5}
+              fill="var(--color-tertiary)"
+              stroke="var(--color-surface)"
+              strokeWidth={2}
+            />
+            <text
+              x={sx(e.x) + 8}
+              y={sy(e.y) - 8}
+              fontSize={11}
+              fontWeight={700}
+              fill="var(--color-tertiary)"
+            >
               {e.kind === "min" ? "min" : e.kind === "maks" ? "maks" : "akar"}
             </text>
           </g>
@@ -215,12 +300,39 @@ export function MathPlot({
         {/* crosshair interaktif */}
         {interactive && hover && hoverNearest && (
           <g pointerEvents="none">
-            <line x1={sx(hoverNearest.x)} x2={sx(hoverNearest.x)} y1={T} y2={T + plotH} stroke="var(--color-on-surface-variant)" strokeWidth={1} strokeDasharray="2 3" />
-            <circle cx={sx(hoverNearest.x)} cy={sy(hoverNearest.y)} r={4.5} fill="var(--color-primary)" stroke="var(--color-surface)" strokeWidth={1.6} />
-            <g transform={`translate(${Math.min(Math.max(sx(hoverNearest.x) + 10, M), W - R - 120)}, ${Math.max(sy(hoverNearest.y) - 46, T)})`}>
-              <rect width={118} height={38} rx={10} fill="var(--color-surface)" stroke="var(--color-outline-variant)" />
-              <text x={12} y={17} fontSize={11} fill="var(--color-on-surface-variant)">x = {hoverNearest.x.toFixed(3)}</text>
-              <text x={12} y={32} fontSize={11} fontWeight={700} fill="var(--color-on-surface)">y = {Number.isFinite(hoverNearest.y) ? hoverNearest.y.toFixed(3) : "—"}</text>
+            <line
+              x1={sx(hoverNearest.x)}
+              x2={sx(hoverNearest.x)}
+              y1={T}
+              y2={T + plotH}
+              stroke="var(--color-on-surface-variant)"
+              strokeWidth={1}
+              strokeDasharray="2 3"
+            />
+            <circle
+              cx={sx(hoverNearest.x)}
+              cy={sy(hoverNearest.y)}
+              r={4.5}
+              fill="var(--color-primary)"
+              stroke="var(--color-surface)"
+              strokeWidth={1.6}
+            />
+            <g
+              transform={`translate(${Math.min(Math.max(sx(hoverNearest.x) + 10, M), W - R - 120)}, ${Math.max(sy(hoverNearest.y) - 46, T)})`}
+            >
+              <rect
+                width={118}
+                height={38}
+                rx={10}
+                fill="var(--color-surface)"
+                stroke="var(--color-outline-variant)"
+              />
+              <text x={12} y={17} fontSize={11} fill="var(--color-on-surface-variant)">
+                x = {hoverNearest.x.toFixed(3)}
+              </text>
+              <text x={12} y={32} fontSize={11} fontWeight={700} fill="var(--color-on-surface)">
+                y = {Number.isFinite(hoverNearest.y) ? hoverNearest.y.toFixed(3) : "—"}
+              </text>
             </g>
           </g>
         )}
@@ -229,7 +341,9 @@ export function MathPlot({
       {/* legenda */}
       <div className="absolute left-3 top-2 flex flex-wrap items-center gap-3 text-[11px] font-medium text-on-surface-variant">
         {expressionLabel && (
-          <span className="rounded-full bg-surface-container-high px-2.5 py-1 math-mono">{expressionLabel}</span>
+          <span className="rounded-full bg-surface-container-high px-2.5 py-1 math-mono">
+            {expressionLabel}
+          </span>
         )}
         <span className="flex items-center gap-1.5">
           <span className="h-0.5 w-5 rounded bg-primary" /> f(x)
@@ -239,8 +353,17 @@ export function MathPlot({
             <span className="h-0.5 w-5 rounded border-t-2 border-dashed border-secondary" /> f′(x)
           </span>
         )}
-        {(roots?.length ?? 0) > 0 && <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full border-2 border-secondary bg-surface" /> akar</span>}
-        {(extrema?.length ?? 0) > 0 && <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-tertiary" /> ekstrem</span>}
+        {(roots?.length ?? 0) > 0 && (
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2 w-2 rounded-full border-2 border-secondary bg-surface" />{" "}
+            akar
+          </span>
+        )}
+        {(extrema?.length ?? 0) > 0 && (
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2 w-2 rounded-full bg-tertiary" /> ekstrem
+          </span>
+        )}
       </div>
     </div>
   );

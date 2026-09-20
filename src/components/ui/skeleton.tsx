@@ -5,7 +5,9 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ className }: SkeletonProps) {
-  return <div role="status" aria-label="memuat" className={cn("rounded-xl bg-shimmer", className)} />;
+  return (
+    <div role="status" aria-label="memuat" className={cn("rounded-xl bg-shimmer", className)} />
+  );
 }
 
 export function SkeletonCard() {

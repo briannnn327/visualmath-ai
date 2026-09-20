@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "check": "biome check ./src",
+    "check:fix": "biome check --write ./src"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.102.8",
@@ -21,6 +24,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

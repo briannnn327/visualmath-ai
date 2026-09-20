@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { registerSchema } from "@/lib/schemas";
 import { createSession } from "@/lib/db/session";
-import { ensureSeeded, db, findUserByEmail, recordActivity } from "@/lib/db/store";
-import { toPublicUser, badRequest } from "@/lib/server/api-auth";
-import { uid } from "@/lib/utils";
+import { db, ensureSeeded, findUserByEmail, recordActivity } from "@/lib/db/store";
+import { registerSchema } from "@/lib/schemas";
+import { badRequest, toPublicUser } from "@/lib/server/api-auth";
 import type { User, UserId } from "@/lib/types";
+import { uid } from "@/lib/utils";
 
 export async function POST(request: Request) {
   ensureSeeded();

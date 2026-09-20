@@ -3,10 +3,21 @@
    Jangan import modul ini dari Client Components.
    ========================================================= */
 import { cookies } from "next/headers";
+import { getSession } from "@/lib/db/session";
+import {
+  db,
+  ensureSeeded,
+  getKelasById,
+  getTopicById,
+  getUserById,
+  progressOf,
+  startOfToday,
+} from "@/lib/db/store";
+import { toPublicUser } from "@/lib/server/api-auth";
 import type {
   ActivityLog,
-  AdminDashboardData,
   ActivityTrendPoint,
+  AdminDashboardData,
   AdminMetrics,
   ClassWithStats,
   HistoryRecord,
@@ -19,9 +30,6 @@ import type {
   User,
   UserId,
 } from "@/lib/types";
-import { getSession } from "@/lib/db/session";
-import { ensureSeeded, db, getKelasById, getTopicById, getUserById, progressOf, startOfToday } from "@/lib/db/store";
-import { toPublicUser } from "@/lib/server/api-auth";
 
 export async function getCurrentSession(): Promise<SessionInfo | null> {
   const c = await cookies();
@@ -83,9 +91,7 @@ export async function getStudentData(userId: string): Promise<StudentDashboardLi
 
   /* Streak: hari-hari berurutan dengan aktivitas, dihitung dari hari ini mundur */
   const activityDays = new Set(
-    db.history
-      .filter((h) => h.userId === userId)
-      .map((h) => new Date(h.createdAt).toDateString())
+    db.history.filter((h) => h.userId === userId).map((h) => new Date(h.createdAt).toDateString()),
   );
   let streak = 0;
   const cursor = new Date();
@@ -96,8 +102,12 @@ export async function getStudentData(userId: string): Promise<StudentDashboardLi
 
   /* Rekomendasi: prioritas 1 = topik mulai dikerjakan dgn mastery < 50 (terendah dulu),
      prioritas 2 = topik belum dicoba (order terkecil). */
-  const attempted = mine.filter((r) => r.progress.mastery < 50).sort((a, b) => a.progress.mastery - b.progress.mastery);
-  const notStarted = rows.filter((r) => r.progress.attempts === 0).sort((a, b) => a.topic.order - b.topic.order);
+  const attempted = mine
+    .filter((r) => r.progress.mastery < 50)
+    .sort((a, b) => a.progress.mastery - b.progress.mastery);
+  const notStarted = rows
+    .filter((r) => r.progress.attempts === 0)
+    .sort((a, b) => a.topic.order - b.topic.order);
   let recommendation: StudentDashboardData["recommendation"] = null;
   const recTarget = attempted[0] ?? notStarted[0];
   if (recTarget) {
@@ -115,7 +125,7 @@ export async function getStudentData(userId: string): Promise<StudentDashboardLi
   let kelasName: string | undefined;
   let classRank: number | undefined;
   const user = getUserById(userId);
-  if (user && user.kelasId) {
+  if (user?.kelasId) {
     const kelas = getKelasById(user.kelasId);
     kelasName = kelas?.nama;
     const classmates = kelas?.mahasiswaIds ?? [];
@@ -170,7 +180,8 @@ export async function getDosenStats(userId: string) {
   const progressRows = db.progress.filter((p) => studentIds.has(p.userId));
   const avgMastery =
     progressRows.length > 0
-      ? Math.round((progressRows.reduce((s, p) => s + p.mastery, 0) / progressRows.length) * 10) / 10
+      ? Math.round((progressRows.reduce((s, p) => s + p.mastery, 0) / progressRows.length) * 10) /
+        10
       : 0;
 
   const kelas: ClassWithStats[] = myClasses.map((k) => {
@@ -190,7 +201,12 @@ export async function getDosenStats(userId: string) {
     .slice(0, 6);
 
   return {
-    stats: { classes: myClasses.length, students: students.length, materials: materials.length, avgMastery },
+    stats: {
+      classes: myClasses.length,
+      students: students.length,
+      materials: materials.length,
+      avgMastery,
+    },
     classes: kelas,
     recent,
   };
@@ -205,19 +221,27 @@ export interface RosterRow {
 }
 
 export function getKelasRoster(kelas: Kelas): RosterRow[] {
-  return kelas.mahasiswaIds.map((uid2) => {
-    const user = getUserById(uid2);
-    if (!user) return null;
-    const pRows = db.progress.filter((p) => p.userId === uid2);
-    const mapped = pRows.map((p) => {
-      const topic = getTopicById(p.topicId);
-      return { topic: topic!, mastery: p.mastery };
-    });
-    const avg = mapped.length ? mapped.reduce((s, m) => s + m.mastery, 0) / mapped.length : 0;
-    const xp = pRows.reduce((s, p) => s + p.xp, 0);
-    const lastActive = pRows.length ? pRows.map((p) => p.updatedAt).sort().reverse()[0] : user.createdAt;
-    return { user, rows: mapped, avg: Math.round(avg * 10) / 10, xp, lastActive };
-  }).filter((r): r is NonNullable<typeof r> => r !== null);
+  return kelas.mahasiswaIds
+    .map((uid2) => {
+      const user = getUserById(uid2);
+      if (!user) return null;
+      const pRows = db.progress.filter((p) => p.userId === uid2);
+      const mapped = pRows.map((p) => {
+        const topic = getTopicById(p.topicId);
+        // biome-ignore lint/style/noNonNullAssertion: topic selalu ada pada seed data.
+        return { topic: topic!, mastery: p.mastery };
+      });
+      const avg = mapped.length ? mapped.reduce((s, m) => s + m.mastery, 0) / mapped.length : 0;
+      const xp = pRows.reduce((s, p) => s + p.xp, 0);
+      const lastActive = pRows.length
+        ? pRows
+            .map((p) => p.updatedAt)
+            .sort()
+            .reverse()[0]
+        : user.createdAt;
+      return { user, rows: mapped, avg: Math.round(avg * 10) / 10, xp, lastActive };
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null);
 }
 
 /* ---------------- Admin ---------------- */
@@ -234,12 +258,15 @@ export async function getAdminData(): Promise<AdminDashboardData> {
   const todayLogs = db.logs.filter((l) => new Date(l.createdAt).getTime() >= todayMs);
   const distinctUsers = new Set(todayLogs.map((l) => l.userId?.toString() ?? "sistem"));
   const aiToday = db.logs.filter(
-    (l) => new Date(l.createdAt).getTime() >= todayMs && /ai\.|quiz\.|graph\./.test(l.action)
+    (l) => new Date(l.createdAt).getTime() >= todayMs && /ai\.|quiz\.|graph\./.test(l.action),
   ).length;
-  const todayHistory = db.history.filter((h) => h.userId === "u-m0" && new Date(h.createdAt).getTime() >= todayMs);
+  const todayHistory = db.history.filter(
+    (h) => h.userId === "u-m0" && new Date(h.createdAt).getTime() >= todayMs,
+  );
   const avgXpToday =
     todayHistory.length > 0
-      ? Math.round((todayHistory.reduce((s, h) => s + (h.xp ?? 0), 0) / todayHistory.length) * 10) / 10
+      ? Math.round((todayHistory.reduce((s, h) => s + (h.xp ?? 0), 0) / todayHistory.length) * 10) /
+        10
       : 0;
 
   const metrics: AdminMetrics = {
@@ -248,7 +275,7 @@ export async function getAdminData(): Promise<AdminDashboardData> {
     questionCount: db.questions.length,
     classCount: db.kelas.length,
     formulaCountToday: db.logs.filter(
-      (l) => l.action === "ai.explain" && new Date(l.createdAt).getTime() >= todayMs
+      (l) => l.action === "ai.explain" && new Date(l.createdAt).getTime() >= todayMs,
     ).length,
     activeUsersToday: distinctUsers.size,
     aiRequestsToday: aiToday,

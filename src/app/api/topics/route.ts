@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
-import { ensureSeeded, db } from "@/lib/db/store";
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { db, ensureSeeded } from "@/lib/db/store";
 import { apiUser, unauthorized } from "@/lib/server/api-auth";
 
 export async function GET(_request: NextRequest) {
@@ -13,7 +13,8 @@ export async function GET(_request: NextRequest) {
     .map((t) => {
       const counts = {
         mudah: db.questions.filter((qs) => qs.topicId === t.id && qs.difficulty === "mudah").length,
-        sedang: db.questions.filter((qs) => qs.topicId === t.id && qs.difficulty === "sedang").length,
+        sedang: db.questions.filter((qs) => qs.topicId === t.id && qs.difficulty === "sedang")
+          .length,
         sulit: db.questions.filter((qs) => qs.topicId === t.id && qs.difficulty === "sulit").length,
       };
       return { ...t, counts };

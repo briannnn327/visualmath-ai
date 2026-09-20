@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { getCurrentPublicUser } from "@/lib/server/data";
 import { homeFor } from "@/components/layout/nav";
+import { getCurrentPublicUser } from "@/lib/server/data";
 import { LatihanClient } from "./latihan-client";
 
 export default async function LatihanPage({

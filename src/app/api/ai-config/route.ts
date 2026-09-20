@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { aiConfigSchema, parseBody, type AIConfigInput } from "@/lib/schemas";
+import { NextResponse } from "next/server";
 import { db, ensureSeeded, recordActivity } from "@/lib/db/store";
+import { type AIConfigInput, aiConfigSchema, parseBody } from "@/lib/schemas";
 import { apiUser, badRequest, forbidden, unauthorized } from "@/lib/server/api-auth";
 
 export async function GET(request: NextRequest) {
@@ -33,6 +33,12 @@ export async function PATCH(request: NextRequest) {
   }
 
   Object.assign(db.aiConfig, input, { updatedAt: new Date().toISOString() });
-  recordActivity({ userId: user.id, actorName: user.name, action: "ai.configure", target: db.aiConfig.model, severity: "info" });
+  recordActivity({
+    userId: user.id,
+    actorName: user.name,
+    action: "ai.configure",
+    target: db.aiConfig.model,
+    severity: "info",
+  });
   return NextResponse.json({ config: db.aiConfig });
 }

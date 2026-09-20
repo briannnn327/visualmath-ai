@@ -2,13 +2,13 @@
 
 /* eslint-disable @next/next/no-img-element -- pratinjau blob/data-URL; next/image tidak mendukung blob dinamis */
 
-import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
+import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
+import { Select } from "@/components/ui/select";
 import { useTopics } from "@/lib/hooks/queries";
 import type { Topic } from "@/lib/types";
 
@@ -27,9 +27,7 @@ export function ScanSoalCard() {
   const [error, setError] = useState<string | null>(null);
   const [confidence, setConfidence] = useState(0);
 
-  const finalTopic = manualId
-    ? topics.data?.find((t) => t.id === manualId) ?? null
-    : detected;
+  const finalTopic = manualId ? (topics.data?.find((t) => t.id === manualId) ?? null) : detected;
 
   function pickFile(file: File | undefined | null) {
     if (!file) return;
@@ -94,7 +92,8 @@ export function ScanSoalCard() {
             <Badge variant="tertiary">Baru</Badge>
           </div>
           <p className="mt-0.5 text-sm text-on-surface-variant">
-            Foto soal Kalkulus II-mu (kamera atau galeri), sistem menebak topiknya lalu langsung arahkan ke latihan atau analisis.
+            Foto soal Kalkulus II-mu (kamera atau galeri), sistem menebak topiknya lalu langsung
+            arahkan ke latihan atau analisis.
           </p>
         </div>
 
@@ -111,6 +110,7 @@ export function ScanSoalCard() {
         <CardContent className="border-t border-outline-variant/60 p-5">
           {phase === "preview" && preview && (
             <div className="flex flex-col items-start gap-4 sm:flex-row">
+              {/* biome-ignore lint/performance/noImgElement: pratinjau blob URL lokal, bukan remote. */}
               <img
                 src={preview}
                 alt="Pratinjau foto soal"
@@ -118,7 +118,8 @@ export function ScanSoalCard() {
               />
               <div className="flex flex-col items-start gap-3">
                 <p className="text-sm text-on-surface-variant">
-                  Foto diterima. Tekan <span className="font-semibold text-on-surface">Deteksi Topik</span> untuk menebak
+                  Foto diterima. Tekan{" "}
+                  <span className="font-semibold text-on-surface">Deteksi Topik</span> untuk menebak
                   materi soal dari katalog VisualMath.
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -136,6 +137,7 @@ export function ScanSoalCard() {
           {phase === "detecting" && (
             <div className="flex items-center gap-4">
               {preview && (
+                // biome-ignore lint/performance/noImgElement: pratinjau blob URL lokal.
                 <img
                   src={preview}
                   alt="Pratinjau foto soal"
@@ -146,14 +148,19 @@ export function ScanSoalCard() {
                 <span className="h-10 w-10 animate-spin rounded-full border-4 border-outline-variant border-t-primary" />
                 <div>
                   <p className="text-sm font-semibold text-on-surface">Mengenali soal…</p>
-                  <p className="text-xs text-on-surface-variant">Mencocokkan dengan katalog topik Kalkulus II.</p>
+                  <p className="text-xs text-on-surface-variant">
+                    Mencocokkan dengan katalog topik Kalkulus II.
+                  </p>
                 </div>
               </div>
             </div>
           )}
 
           {phase === "error" && (
-            <p role="alert" className="rounded-xl bg-error-container px-4 py-3 text-sm font-medium text-on-error-container">
+            <p
+              role="alert"
+              className="rounded-xl bg-error-container px-4 py-3 text-sm font-medium text-on-error-container"
+            >
               {error}
             </p>
           )}
@@ -162,6 +169,7 @@ export function ScanSoalCard() {
             <div className="space-y-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                 {preview && (
+                  // biome-ignore lint/performance/noImgElement: pratinjau blob URL lokal.
                   <img
                     src={preview}
                     alt="Pratinjau foto soal"
@@ -172,10 +180,14 @@ export function ScanSoalCard() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Icon name="check-circle" size={18} className="text-secondary" />
                     {detected && (
-                      <p className="font-display text-xl font-extrabold text-on-surface">Topik Terdeteksi</p>
+                      <p className="font-display text-xl font-extrabold text-on-surface">
+                        Topik Terdeteksi
+                      </p>
                     )}
                   </div>
-                  <h4 className="mt-2 font-display text-lg font-bold text-on-surface">{finalTopic?.title}</h4>
+                  <h4 className="mt-2 font-display text-lg font-bold text-on-surface">
+                    {finalTopic?.title}
+                  </h4>
                   <p className="text-sm text-on-surface-variant">{finalTopic?.subtitle}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <Badge
@@ -194,7 +206,9 @@ export function ScanSoalCard() {
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                 <label className="block min-w-0 flex-1">
-                  <span className="mb-1 block text-sm font-semibold text-on-surface">Salah tebak? Pilih topik manual</span>
+                  <span className="mb-1 block text-sm font-semibold text-on-surface">
+                    Salah tebak? Pilih topik manual
+                  </span>
                   <Select value={manualId} onChange={(e) => setManualId(e.target.value)}>
                     <option value="">Pakai hasil deteksi otomatis</option>
                     {(topics.data ?? []).map((t) => (
@@ -219,7 +233,9 @@ export function ScanSoalCard() {
                   variant="secondary"
                   icon="sparkle"
                   onClick={() =>
-                    router.push(finalTopic ? `/ai-explainer?topicId=${finalTopic.id}` : "/ai-explainer")
+                    router.push(
+                      finalTopic ? `/ai-explainer?topicId=${finalTopic.id}` : "/ai-explainer",
+                    )
                   }
                 >
                   Analisis di AI Explainer

@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,17 +11,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
-import { Field } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { Field } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { useToastStore } from "@/components/ui/toast";
 import { useAIConfig, useUpdateAIConfig } from "@/lib/hooks/queries";
-import { aiConfigSchema, type AIConfigInput } from "@/lib/schemas";
-import { cn, formatDate, formatNumber } from "@/lib/utils";
+import { type AIConfigInput, aiConfigSchema } from "@/lib/schemas";
 import type { AIConfig } from "@/lib/types";
+import { cn, formatDate, formatNumber } from "@/lib/utils";
 
 const MODEL_OPTIONS = ["gemini-2.5-flash", "gpt-4o-mini", "claude-haiku", "llama-3.1-8b"];
 
@@ -233,18 +233,23 @@ export default function AdminKonfigurasiPage() {
                       role="switch"
                       aria-checked={active}
                       aria-label={f.label}
-                      onClick={() => updateForm((v) => ({ ...v, features: { ...v.features, [f.key]: !v.features[f.key] } }))}
+                      onClick={() =>
+                        updateForm((v) => ({
+                          ...v,
+                          features: { ...v.features, [f.key]: !v.features[f.key] },
+                        }))
+                      }
                       className={cn(
                         "flex w-full items-start gap-3 rounded-2xl p-4 text-left transition-colors",
                         active
                           ? "bg-primary-container text-on-primary-container ring-1 ring-inset ring-primary/30"
-                          : "bg-surface-container-high text-on-surface-variant hover:bg-surface-container"
+                          : "bg-surface-container-high text-on-surface-variant hover:bg-surface-container",
                       )}
                     >
                       <span
                         className={cn(
                           "grid h-10 w-10 shrink-0 place-items-center rounded-xl",
-                          active ? "bg-on-primary-container/10" : "bg-surface-container"
+                          active ? "bg-on-primary-container/10" : "bg-surface-container",
                         )}
                       >
                         <Icon name={f.icon} size={20} />
@@ -255,13 +260,13 @@ export default function AdminKonfigurasiPage() {
                           <span
                             className={cn(
                               "relative h-5 w-9 shrink-0 rounded-full transition-colors",
-                              active ? "bg-primary" : "bg-outline-variant"
+                              active ? "bg-primary" : "bg-outline-variant",
                             )}
                           >
                             <span
                               className={cn(
                                 "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all",
-                                active ? "left-[18px]" : "left-0.5"
+                                active ? "left-[18px]" : "left-0.5",
                               )}
                             />
                           </span>

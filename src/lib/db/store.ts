@@ -64,7 +64,7 @@ export function progressOf(userId: string, topicId: string): Progress | undefine
 
 export function upsertProgress(entry: Progress): void {
   const idx = db.progress.findIndex(
-    (p) => p.userId === entry.userId && p.topicId === entry.topicId
+    (p) => p.userId === entry.userId && p.topicId === entry.topicId,
   );
   if (idx >= 0) db.progress[idx] = entry;
   else db.progress.push(entry);

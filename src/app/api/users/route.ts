@@ -1,10 +1,24 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { userAdminSchema, parseBody, type UserAdminInput } from "@/lib/schemas";
-import { db, ensureSeeded, findUserByEmail, getKelasById, getUserById, recordActivity } from "@/lib/db/store";
-import { apiUser, badRequest, forbidden, notFound, toPublicUser, unauthorized } from "@/lib/server/api-auth";
-import { uid } from "@/lib/utils";
+import { NextResponse } from "next/server";
+import {
+  db,
+  ensureSeeded,
+  findUserByEmail,
+  getKelasById,
+  getUserById,
+  recordActivity,
+} from "@/lib/db/store";
+import { parseBody, type UserAdminInput, userAdminSchema } from "@/lib/schemas";
+import {
+  apiUser,
+  badRequest,
+  forbidden,
+  notFound,
+  toPublicUser,
+  unauthorized,
+} from "@/lib/server/api-auth";
 import type { User, UserId } from "@/lib/types";
+import { uid } from "@/lib/utils";
 
 function withMeta(u: User) {
   const kelas = u.kelasId ? getKelasById(u.kelasId) : undefined;
@@ -61,7 +75,13 @@ export async function POST(request: NextRequest) {
     if (kelas && !kelas.mahasiswaIds.includes(created.id)) kelas.mahasiswaIds.push(created.id);
   }
 
-  recordActivity({ userId: user.id, actorName: user.name, action: "user.create", target: created.email, severity: "info" });
+  recordActivity({
+    userId: user.id,
+    actorName: user.name,
+    action: "user.create",
+    target: created.email,
+    severity: "info",
+  });
   return NextResponse.json({ user: withMeta(created) }, { status: 201 });
 }
 
@@ -81,7 +101,12 @@ export async function PATCH(request: NextRequest) {
   const target = getUserById(id);
   if (!target) return notFound("Pengguna tidak ditemukan");
 
-  if (target.role === "admin" && db.users.filter((u) => u.role === "admin").length <= 1 && patch.role && patch.role !== "admin")
+  if (
+    target.role === "admin" &&
+    db.users.filter((u) => u.role === "admin").length <= 1 &&
+    patch.role &&
+    patch.role !== "admin"
+  )
     return badRequest("Minimal harus ada satu admin");
 
   if (patch.name) target.name = patch.name;
@@ -109,7 +134,13 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
-  recordActivity({ userId: user.id, actorName: user.name, action: "user.update", target: target.email, severity: "info" });
+  recordActivity({
+    userId: user.id,
+    actorName: user.name,
+    action: "user.update",
+    target: target.email,
+    severity: "info",
+  });
   return NextResponse.json({ user: withMeta(target) });
 }
 
@@ -137,6 +168,12 @@ export async function DELETE(request: NextRequest) {
   db.progress = db.progress.filter((p) => p.userId !== target.id);
   db.history = db.history.filter((h) => h.userId !== target.id);
 
-  recordActivity({ userId: user.id, actorName: user.name, action: "user.delete", target: target.email, severity: "warning" });
+  recordActivity({
+    userId: user.id,
+    actorName: user.name,
+    action: "user.delete",
+    target: target.email,
+    severity: "warning",
+  });
   return NextResponse.json({ ok: true });
 }

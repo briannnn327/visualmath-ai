@@ -1,18 +1,27 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { classInputSchema, parseBody, type ClassInput } from "@/lib/schemas";
+import { NextResponse } from "next/server";
 import { db, ensureSeeded, getUserById, recordActivity } from "@/lib/db/store";
-import { apiUser, badRequest, forbidden, notFound, toPublicUser, unauthorized } from "@/lib/server/api-auth";
+import { type ClassInput, classInputSchema, parseBody } from "@/lib/schemas";
+import {
+  apiUser,
+  badRequest,
+  forbidden,
+  notFound,
+  toPublicUser,
+  unauthorized,
+} from "@/lib/server/api-auth";
 import { getKelasRoster } from "@/lib/server/data";
-import { uid } from "@/lib/utils";
 import type { Kelas, KelasId, UserId } from "@/lib/types";
+import { uid } from "@/lib/utils";
 
 function withStats(k: Kelas) {
   const rows = db.progress.filter((p) => k.mahasiswaIds.includes(p.userId));
   return {
     ...k,
     studentCount: k.mahasiswaIds.length,
-    avgMastery: rows.length ? Math.round((rows.reduce((s, p) => s + p.mastery, 0) / rows.length) * 10) / 10 : 0,
+    avgMastery: rows.length
+      ? Math.round((rows.reduce((s, p) => s + p.mastery, 0) / rows.length) * 10) / 10
+      : 0,
   };
 }
 
@@ -76,7 +85,13 @@ export async function POST(request: NextRequest) {
     createdAt: new Date().toISOString(),
   };
   db.kelas.push(kelas);
-  recordActivity({ userId: user.id, actorName: user.name, action: "class.create", target: kelas.kode, severity: "info" });
+  recordActivity({
+    userId: user.id,
+    actorName: user.name,
+    action: "class.create",
+    target: kelas.kode,
+    severity: "info",
+  });
   return NextResponse.json({ class: withStats(kelas) }, { status: 201 });
 }
 
@@ -101,7 +116,13 @@ export async function PATCH(request: NextRequest) {
   if (patch.nama) kelas.nama = patch.nama;
   if (patch.dosenId && getUserById(patch.dosenId)) kelas.dosenId = patch.dosenId as UserId;
 
-  recordActivity({ userId: user.id, actorName: user.name, action: "class.update", target: kelas.kode, severity: "info" });
+  recordActivity({
+    userId: user.id,
+    actorName: user.name,
+    action: "class.update",
+    target: kelas.kode,
+    severity: "info",
+  });
   return NextResponse.json({ class: withStats(kelas) });
 }
 
@@ -121,6 +142,12 @@ export async function DELETE(request: NextRequest) {
   const idx = db.kelas.findIndex((k) => k.id === id);
   if (idx < 0) return notFound("Kelas tidak ditemukan");
   db.kelas.splice(idx, 1);
-  recordActivity({ userId: user.id, actorName: user.name, action: "class.delete", target: String(id), severity: "info" });
+  recordActivity({
+    userId: user.id,
+    actorName: user.name,
+    action: "class.delete",
+    target: String(id),
+    severity: "info",
+  });
   return NextResponse.json({ ok: true });
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { type ReactNode, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/utils";
 
 interface ModalProps {
   open: boolean;
@@ -17,7 +17,15 @@ interface ModalProps {
 
 const sizes = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" };
 
-export function Modal({ open, onClose, title, description, children, footer, size = "md" }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  description,
+  children,
+  footer,
+  size = "md",
+}: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -44,7 +52,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
         aria-label={title}
         className={cn(
           "relative z-10 max-h-[90vh] w-full overflow-y-auto rounded-t-3xl border border-outline-variant bg-surface p-6 shadow-float sm:rounded-3xl animate-fade-up",
-          sizes[size]
+          sizes[size],
         )}
       >
         <div className="mb-4 flex items-start justify-between gap-4">
@@ -57,7 +65,9 @@ export function Modal({ open, onClose, title, description, children, footer, siz
           </Button>
         </div>
         {children}
-        {footer && <div className="mt-6 flex flex-wrap items-center justify-end gap-2">{footer}</div>}
+        {footer && (
+          <div className="mt-6 flex flex-wrap items-center justify-end gap-2">{footer}</div>
+        )}
       </div>
     </div>
   );

@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { formulaInputSchema, type FormulaInput } from "@/lib/schemas";
-import { analyzeExpression, ParseError } from "@/lib/math/parser";
+import { NextResponse } from "next/server";
 import { addHistory, db, ensureSeeded, recordActivity } from "@/lib/db/store";
+import { analyzeExpression, ParseError } from "@/lib/math/parser";
+import { type FormulaInput, formulaInputSchema } from "@/lib/schemas";
 import { apiUser, badRequest, unauthorized } from "@/lib/server/api-auth";
-import { uid } from "@/lib/utils";
 import type { FormulaAnalysis, FormulaId, FormulaRecord } from "@/lib/types";
+import { uid } from "@/lib/utils";
 
 function toAnalysis(source: string, variable?: string): FormulaAnalysis {
   const r = analyzeExpression(source, variable ?? "x");

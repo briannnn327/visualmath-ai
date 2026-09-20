@@ -4,7 +4,7 @@
    Bisa diverifikasi oleh middleware/proxy & route handler
    tanpa berbagi memori antar-runtime.
    ========================================================= */
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import type { Role, SessionInfo, UserId } from "@/lib/types";
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 hari
@@ -22,12 +22,10 @@ function sign(payload: string): string {
   return createHmac("sha256", SECRET).update(payload).digest("base64url");
 }
 
-export function createSession(input: {
-  id: UserId;
-  role: Role;
-  name: string;
-  email: string;
-}): { token: string; session: SessionInfo } {
+export function createSession(input: { id: UserId; role: Role; name: string; email: string }): {
+  token: string;
+  session: SessionInfo;
+} {
   const session: SessionInfo = {
     userId: input.id,
     role: input.role,
@@ -73,7 +71,9 @@ export function destroySession(_token?: string): void {
 }
 
 /** Untuk halaman RSC: baca sesi dari cookie header. */
-export function sessionFromHeader(cookieHeader: string | null | undefined): SessionInfo | undefined {
+export function sessionFromHeader(
+  cookieHeader: string | null | undefined,
+): SessionInfo | undefined {
   if (!cookieHeader) return undefined;
   const match = /(?:^|;\s*)vma_session=([^;]+)/.exec(cookieHeader);
   return getSession(match?.[1]);

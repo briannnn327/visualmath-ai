@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand";
+import { homeFor } from "@/components/layout/nav";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { getCurrentPublicUser } from "@/lib/server/data";
-import { homeFor } from "@/components/layout/nav";
 
 const features: Array<{ icon: IconName; title: string; desc: string }> = [
   {
@@ -44,7 +44,10 @@ function HeroPlot() {
   const fx = (x: number) => x * x;
   return (
     <div className="relative w-full max-w-md">
-      <div className="absolute -inset-6 rounded-[2.5rem] bg-brand-gradient opacity-20 blur-3xl" aria-hidden />
+      <div
+        className="absolute -inset-6 rounded-[2.5rem] bg-brand-gradient opacity-20 blur-3xl"
+        aria-hidden
+      />
       <Card className="relative overflow-hidden">
         <CardContent>
           <div className="mb-3 flex items-center justify-between">
@@ -63,17 +66,32 @@ function HeroPlot() {
             </defs>
             {Array.from({ length: 7 }, (_, i) => {
               const x = 30 + i * 43;
-              return <line key={`v${i}`} x1={x} y1={10} x2={x} y2={190} stroke="var(--color-outline-variant)" />;
+              return (
+                <line
+                  key={`v${i}`}
+                  x1={x}
+                  y1={10}
+                  x2={x}
+                  y2={190}
+                  stroke="var(--color-outline-variant)"
+                />
+              );
             })}
             {Array.from({ length: 5 }, (_, i) => {
               const y = 20 + i * 42;
-              return <line key={`h${i}`} x1={30} y1={y} x2={288} y2={y} stroke="var(--color-outline-variant)" />;
+              return (
+                <line
+                  key={`h${i}`}
+                  x1={30}
+                  y1={y}
+                  x2={288}
+                  y2={y}
+                  stroke="var(--color-outline-variant)"
+                />
+              );
             })}
             <line x1={30} y1={190} x2={288} y2={190} stroke="var(--color-outline)" />
-            <polygon
-              points="30,20 -10,190 288,190"
-              fill="url(#plotFill)"
-            />
+            <polygon points="30,20 -10,190 288,190" fill="url(#plotFill)" />
             <path
               d={Array.from({ length: 61 }, (_, i) => {
                 const x = -2.5 + (i / 60) * 5.5;
@@ -90,7 +108,7 @@ function HeroPlot() {
               d={Array.from({ length: 61 }, (_, i) => {
                 const x = -2.5 + (i / 60) * 5.5;
                 const px = 30 + ((x + 2.5) / 5.5) * 258;
-                const py = 190 - ((2 * x / 8.5) * 170 + 8);
+                const py = 190 - (((2 * x) / 8.5) * 170 + 8);
                 return `${i === 0 ? "M" : "L"}${px.toFixed(1)},${py.toFixed(1)}`;
               }).join(" ")}
               fill="none"
@@ -99,7 +117,12 @@ function HeroPlot() {
               strokeDasharray="5 5"
               strokeLinecap="round"
             />
-            <circle cx={30 + ((-2.5 + 2.5) / 5.5) * 258} cy={190 - ((fx(-2.5) / 8.5) * 170 + 8)} r="4" fill="var(--color-tertiary)" />
+            <circle
+              cx={30 + ((-2.5 + 2.5) / 5.5) * 258}
+              cy={190 - ((fx(-2.5) / 8.5) * 170 + 8)}
+              r="4"
+              fill="var(--color-tertiary)"
+            />
           </svg>
         </CardContent>
       </Card>
@@ -118,9 +141,15 @@ export default async function LandingPage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 lg:px-8">
           <Logo />
           <nav className="hidden items-center gap-6 text-sm font-semibold text-on-surface-variant md:flex">
-            <a href="#fitur" className="transition-colors hover:text-on-surface">Fitur</a>
-            <a href="#cara" className="transition-colors hover:text-on-surface">Cara Kerja</a>
-            <a href="#modul" className="transition-colors hover:text-on-surface">Materi</a>
+            <a href="#fitur" className="transition-colors hover:text-on-surface">
+              Fitur
+            </a>
+            <a href="#cara" className="transition-colors hover:text-on-surface">
+              Cara Kerja
+            </a>
+            <a href="#modul" className="transition-colors hover:text-on-surface">
+              Materi
+            </a>
           </nav>
           <div className="flex items-center gap-2">
             {user ? (
@@ -159,9 +188,8 @@ export default async function LandingPage() {
               dengan AI
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-on-surface-variant">
-              VisualMath AI menjelaskan setiap langkah penyelesaian, memvisualisasikan fungsi
-              secara interaktif, dan melatihmu dengan soal adaptif yang menyesuaikan tingkat
-              penguasaan.
+              VisualMath AI menjelaskan setiap langkah penyelesaian, memvisualisasikan fungsi secara
+              interaktif, dan melatihmu dengan soal adaptif yang menyesuaikan tingkat penguasaan.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link href={user ? ctaHref : "/register"}>
@@ -182,7 +210,10 @@ export default async function LandingPage() {
                 ["+30", "Bank Soal"],
                 ["×3", "Tingkat Adaptif"],
               ].map(([v, l]) => (
-                <div key={l} className="rounded-2xl border border-outline-variant bg-surface-container/60 p-3 text-center">
+                <div
+                  key={l}
+                  className="rounded-2xl border border-outline-variant bg-surface-container/60 p-3 text-center"
+                >
                   <dt className="font-display text-xl font-extrabold text-primary">{v}</dt>
                   <dd className="text-xs font-medium text-on-surface-variant">{l}</dd>
                 </div>
@@ -196,15 +227,22 @@ export default async function LandingPage() {
       {/* Fitur */}
       <section id="fitur" className="mx-auto max-w-6xl px-4 py-20 lg:px-8">
         <div className="mx-auto mb-12 max-w-2xl text-center">
-          <Badge variant="primary" className="mb-3">Fitur Unggulan</Badge>
-          <h2 className="font-display text-3xl font-extrabold text-on-surface">Satu platform untuk semua peran</h2>
+          <Badge variant="primary" className="mb-3">
+            Fitur Unggulan
+          </Badge>
+          <h2 className="font-display text-3xl font-extrabold text-on-surface">
+            Satu platform untuk semua peran
+          </h2>
           <p className="mt-3 text-on-surface-variant">
             Dirancang sesuai kebutuhan mahasiswa, dosen, dan administrator kampus.
           </p>
         </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => (
-            <Card key={f.title} className="transition-all duration-200 hover:-translate-y-1 hover:shadow-card">
+            <Card
+              key={f.title}
+              className="transition-all duration-200 hover:-translate-y-1 hover:shadow-card"
+            >
               <CardContent className="p-6">
                 <span className="mb-4 grid h-11 w-11 place-items-center rounded-2xl bg-primary-container text-on-primary-container">
                   <Icon name={f.icon} size={22} />
@@ -221,17 +259,28 @@ export default async function LandingPage() {
       <section id="cara" className="border-y border-outline-variant bg-surface-container/40">
         <div className="mx-auto max-w-6xl px-4 py-20 lg:px-8">
           <div className="mx-auto mb-12 max-w-2xl text-center">
-            <Badge variant="secondary" className="mb-3">Cara Kerja</Badge>
-            <h2 className="font-display text-3xl font-extrabold text-on-surface">Empat langkah menuju paham</h2>
+            <Badge variant="secondary" className="mb-3">
+              Cara Kerja
+            </Badge>
+            <h2 className="font-display text-3xl font-extrabold text-on-surface">
+              Empat langkah menuju paham
+            </h2>
           </div>
           <ol className="grid gap-5 md:grid-cols-4">
             {[
               ["1", "Masukkan ekspresi", "Ketik fungsi seperti f(x) = 3x² + 2x − 1."],
-              ["2", "AI menganalisis", "Mesin menghitung turunan, akar, ekstrem, dan integral numerik."],
+              [
+                "2",
+                "AI menganalisis",
+                "Mesin menghitung turunan, akar, ekstrem, dan integral numerik.",
+              ],
               ["3", "Pahami langkahnya", "Setiap aturan turunan dijelaskan satu per satu."],
               ["4", "Latihan adaptif", "Soal naik/turun kesulitan mengikuti penguasaanmu."],
             ].map(([n, t, d]) => (
-              <li key={n} className="relative rounded-2xl border border-outline-variant bg-surface p-6 shadow-soft">
+              <li
+                key={n}
+                className="relative rounded-2xl border border-outline-variant bg-surface p-6 shadow-soft"
+              >
                 <span className="mb-4 grid h-9 w-9 place-items-center rounded-full bg-brand-gradient font-display text-sm font-bold text-on-primary">
                   {n}
                 </span>
@@ -246,8 +295,12 @@ export default async function LandingPage() {
       {/* Modul */}
       <section id="modul" className="mx-auto max-w-6xl px-4 py-20 lg:px-8">
         <div className="mx-auto mb-12 max-w-2xl text-center">
-          <Badge variant="tertiary" className="mb-3">Kurikulum</Badge>
-          <h2 className="font-display text-3xl font-extrabold text-on-surface">Delapan topik Kalkulus Peubah Banyak</h2>
+          <Badge variant="tertiary" className="mb-3">
+            Kurikulum
+          </Badge>
+          <h2 className="font-display text-3xl font-extrabold text-on-surface">
+            Delapan topik Kalkulus Peubah Banyak
+          </h2>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
@@ -260,7 +313,10 @@ export default async function LandingPage() {
             "Integral Lipat Dua",
             "Integral Lipat Tiga",
           ].map((t, i) => (
-            <div key={t} className="flex items-center gap-3 rounded-2xl border border-outline-variant bg-surface-container/50 p-4">
+            <div
+              key={t}
+              className="flex items-center gap-3 rounded-2xl border border-outline-variant bg-surface-container/50 p-4"
+            >
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-container text-xs font-bold text-on-primary-container">
                 {i + 1}
               </span>
@@ -281,7 +337,9 @@ export default async function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-outline-variant">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-8 text-sm text-on-surface-variant sm:flex-row lg:px-8">
-          <span>© {new Date().getFullYear()} VisualMath AI · Proyek Praktikum Frontend Engineer</span>
+          <span>
+            © {new Date().getFullYear()} VisualMath AI · Proyek Praktikum Frontend Engineer
+          </span>
           <span className="flex items-center gap-1.5">
             <Icon name="sparkle" size={14} className="text-primary" />
             Dibangun dengan Next.js

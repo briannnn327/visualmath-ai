@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { exerciseAnswerSchema, difficultyPoint } from "@/lib/schemas";
+import { NextResponse } from "next/server";
 import { db, ensureSeeded, progressOf, upsertProgress } from "@/lib/db/store";
+import { difficultyPoint, exerciseAnswerSchema } from "@/lib/schemas";
 import { apiUser, badRequest, notFound, unauthorized } from "@/lib/server/api-auth";
 import type { AnswerResult, Difficulty, Progress, UserId } from "@/lib/types";
 
@@ -30,7 +30,9 @@ export async function POST(request: NextRequest) {
     return badRequest(parsed.error.issues[0]?.message ?? "Data jawaban tidak valid");
   }
 
-  const question = db.questions.find((q) => q.id === parsed.data.questionId && q.topicId === parsed.data.topicId);
+  const question = db.questions.find(
+    (q) => q.id === parsed.data.questionId && q.topicId === parsed.data.topicId,
+  );
   if (!question) return notFound("Soal tidak ditemukan");
 
   /* Periksa jawaban */

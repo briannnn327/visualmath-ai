@@ -1,12 +1,12 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Progress } from "@/components/ui/progress";
-import { formatDate, formatNumber } from "@/lib/utils";
 import { getCurrentUser, getDosenStats } from "@/lib/server/data";
 import type { ActivityKind } from "@/lib/types";
+import { formatDate, formatNumber } from "@/lib/utils";
 
 const kindIcon: Record<ActivityKind, IconName> = {
   formula: "sparkle",
@@ -27,9 +27,7 @@ export default async function DosenDashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-display text-2xl font-extrabold text-on-surface">
-          Halo, {firstName}!
-        </h2>
+        <h2 className="font-display text-2xl font-extrabold text-on-surface">Halo, {firstName}!</h2>
         <p className="mt-1 text-sm text-on-surface-variant">
           Ringkasan kelas dan aktivitas mahasiswa Anda.
         </p>
@@ -110,7 +108,9 @@ export default async function DosenDashboardPage() {
                 <div className="flex items-center gap-3">
                   <Progress
                     value={k.avgMastery}
-                    color={k.avgMastery >= 70 ? "success" : k.avgMastery >= 40 ? "primary" : "warning"}
+                    color={
+                      k.avgMastery >= 70 ? "success" : k.avgMastery >= 40 ? "primary" : "warning"
+                    }
                     showLabel
                   />
                 </div>

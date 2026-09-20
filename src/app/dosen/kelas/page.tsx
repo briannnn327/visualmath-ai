@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input, Field } from "@/components/ui/input";
-import { Modal } from "@/components/ui/modal";
+import { Card, CardContent } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
+import { Field, Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
 import { SkeletonCard } from "@/components/ui/skeleton";
-import { useClasses, useCreateClass, useUpdateClass, useDeleteClass } from "@/lib/hooks/queries";
-import { useAuthStore } from "@/lib/store/authStore";
 import { useToastStore } from "@/components/ui/toast";
-import { formatDate } from "@/lib/utils";
 import type { ClassWithStats } from "@/lib/hooks/queries";
+import { useClasses, useCreateClass, useDeleteClass, useUpdateClass } from "@/lib/hooks/queries";
+import { useAuthStore } from "@/lib/store/authStore";
+import { formatDate } from "@/lib/utils";
 
 export default function DosenKelasPage() {
   const currentUser = useAuthStore((s) => s.user);
@@ -75,7 +75,10 @@ export default function DosenKelasPage() {
   }
 
   async function handleDelete(k: ClassWithStats) {
-    if (!window.confirm(`Hapus kelas "${k.nama}" (${k.kode})? Mahasiswa di dalamnya tetap tersimpan.`)) return;
+    if (
+      !window.confirm(`Hapus kelas "${k.nama}" (${k.kode})? Mahasiswa di dalamnya tetap tersimpan.`)
+    )
+      return;
     setDeletingId(k.id);
     try {
       await deleteClass.mutateAsync(k.id);
@@ -171,8 +174,12 @@ export default function DosenKelasPage() {
 
               <dl className="mt-4 grid grid-cols-2 gap-2">
                 <div className="rounded-xl bg-surface-container/60 p-2.5">
-                  <dt className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">Siswa</dt>
-                  <dd className="font-display text-lg font-extrabold tabular text-on-surface">{k.studentCount}</dd>
+                  <dt className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
+                    Siswa
+                  </dt>
+                  <dd className="font-display text-lg font-extrabold tabular text-on-surface">
+                    {k.studentCount}
+                  </dd>
                 </div>
                 <div className="rounded-xl bg-surface-container/60 p-2.5">
                   <dt className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
@@ -181,11 +188,15 @@ export default function DosenKelasPage() {
                       Mastery
                     </span>
                   </dt>
-                  <dd className="font-display text-lg font-extrabold tabular text-on-surface">{k.avgMastery}%</dd>
+                  <dd className="font-display text-lg font-extrabold tabular text-on-surface">
+                    {k.avgMastery}%
+                  </dd>
                 </div>
               </dl>
 
-              <p className="mt-3 text-xs text-on-surface-variant">Dibuat {formatDate(k.createdAt)}</p>
+              <p className="mt-3 text-xs text-on-surface-variant">
+                Dibuat {formatDate(k.createdAt)}
+              </p>
             </CardContent>
           </Card>
         ))}

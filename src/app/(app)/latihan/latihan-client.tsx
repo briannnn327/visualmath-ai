@@ -1,20 +1,20 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
+import { type FormEvent, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input, Field } from "@/components/ui/input";
-import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
+import { Field, Input } from "@/components/ui/input";
 import { Ring } from "@/components/ui/ring";
-import { useTopics, useQuestion, useCheckAnswer, useCompleteExercise } from "@/lib/hooks/queries";
-import { useExerciseStore } from "@/lib/store/exerciseStore";
+import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 import { useToastStore } from "@/components/ui/toast";
-import { topicIcon, formatNumber } from "@/lib/utils";
+import { useCheckAnswer, useCompleteExercise, useQuestion, useTopics } from "@/lib/hooks/queries";
 import { difficultyLabel } from "@/lib/schemas";
+import { useExerciseStore } from "@/lib/store/exerciseStore";
 import type { AnswerResult, Difficulty } from "@/lib/types";
+import { formatNumber, topicIcon } from "@/lib/utils";
 
 const GOAL = 5;
 
@@ -48,7 +48,10 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
   const xp = useExerciseStore((s) => s.xp);
 
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [lastFeedback, setLastFeedback] = useState<{ result: AnswerResult; mastery: number } | null>(null);
+  const [lastFeedback, setLastFeedback] = useState<{
+    result: AnswerResult;
+    mastery: number;
+  } | null>(null);
   const [answer, setAnswer] = useState("");
   const [choice, setChoice] = useState("");
   const [showHint, setShowHint] = useState(false);
@@ -65,7 +68,16 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
     setChoice("");
   }
 
-  async function finish(reason: "selesai" | "quit", snapshot: { topicId: string | null; topicTitle: string; total: number; correct: number; xp: number }) {
+  async function finish(
+    reason: "selesai" | "quit",
+    snapshot: {
+      topicId: string | null;
+      topicTitle: string;
+      total: number;
+      correct: number;
+      xp: number;
+    },
+  ) {
     if (!snapshot.topicId) return;
     try {
       const { score } = await complete.mutateAsync({
@@ -101,6 +113,7 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
     try {
       const { result, mastery } = await checkAnswer.mutateAsync({
         questionId: question.id,
+        // biome-ignore lint/style/noNonNullAssertion: halaman hanya diakses dari dalam topik.
         topicId: topicId!,
         answer: userAnswer,
         timeMs: 0,
@@ -114,11 +127,13 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
   async function handleNext() {
     if (!lastFeedback) return;
     const willFinish = useExerciseStore.getState().total + 1 >= GOAL;
-    useExerciseStore.getState().record(
-      lastFeedback.result.correct,
-      lastFeedback.result.xpEarned,
-      lastFeedback.result.nextDifficulty
-    );
+    useExerciseStore
+      .getState()
+      .record(
+        lastFeedback.result.correct,
+        lastFeedback.result.xpEarned,
+        lastFeedback.result.nextDifficulty,
+      );
     const snapshot = useExerciseStore.getState();
     setLastFeedback(null);
     setAnswer("");
@@ -143,12 +158,18 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
               value={pct}
               size={140}
               label={`${pct}%`}
-              sublabel={pct >= 70 ? "Selesai!" : summary.reason === "quit" ? "Dihentikan" : "Coba lagi"}
+              sublabel={
+                pct >= 70 ? "Selesai!" : summary.reason === "quit" ? "Dihentikan" : "Coba lagi"
+              }
               color="var(--color-primary)"
             />
             <div>
               <h2 className="font-display text-2xl font-extrabold text-on-surface">
-                {pct >= 70 ? "Kerja bagus!" : summary.reason === "quit" ? "Sesi dihentikan" : "Terus berlatih!"}
+                {pct >= 70
+                  ? "Kerja bagus!"
+                  : summary.reason === "quit"
+                    ? "Sesi dihentikan"
+                    : "Terus berlatih!"}
               </h2>
               <p className="mt-1 text-sm text-on-surface-variant">{summary.topicTitle}</p>
             </div>
@@ -158,9 +179,16 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
                 ["XP", `+${formatNumber(summary.xp)}`],
                 ["Skor", `${summary.score}`],
               ].map(([k, v]) => (
-                <div key={k} className="rounded-2xl border border-outline-variant bg-surface-container/60 p-3">
-                  <dt className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">{k}</dt>
-                  <dd className="font-display text-lg font-extrabold tabular text-on-surface">{v}</dd>
+                <div
+                  key={k}
+                  className="rounded-2xl border border-outline-variant bg-surface-container/60 p-3"
+                >
+                  <dt className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
+                    {k}
+                  </dt>
+                  <dd className="font-display text-lg font-extrabold tabular text-on-surface">
+                    {v}
+                  </dd>
                 </div>
               ))}
             </dl>
@@ -218,7 +246,9 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
                   </span>
                   <div className="min-w-0 flex-1">
                     <h3 className="font-display font-bold text-on-surface">{t.title}</h3>
-                    <p className="mt-0.5 line-clamp-2 text-sm text-on-surface-variant">{t.description}</p>
+                    <p className="mt-0.5 line-clamp-2 text-sm text-on-surface-variant">
+                      {t.description}
+                    </p>
                   </div>
                 </div>
                 <div className="mt-4 flex items-center justify-between gap-2">
@@ -228,7 +258,7 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
                         <Badge key={d} variant={diffBadge[d]}>
                           {difficultyLabel[d]}: {t.counts[d]}
                         </Badge>
-                      ) : null
+                      ) : null,
                     )}
                   </div>
                   <Button size="sm" icon="play" onClick={() => start(t.id, t.title)}>
@@ -249,7 +279,9 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-display text-xl font-extrabold text-on-surface">{topicTitle}</h2>
-          <p className="text-sm text-on-surface-variant">Soal {Math.min(total + 1, GOAL)} dari {GOAL}</p>
+          <p className="text-sm text-on-surface-variant">
+            Soal {Math.min(total + 1, GOAL)} dari {GOAL}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={diffBadge[difficulty]}>
@@ -257,8 +289,7 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
             {difficultyLabel[difficulty]}
           </Badge>
           <Badge variant="primary">
-            <Icon name="star" size={12} />
-            +{formatNumber(xp)} XP
+            <Icon name="star" size={12} />+{formatNumber(xp)} XP
           </Badge>
           <Button variant="ghost" size="sm" onClick={handleQuit}>
             Hentikan
@@ -288,15 +319,18 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
           {question && (
             <>
               <div>
-                {question.latex && (
-                  <p className="mb-2 font-mono text-primary">{question.latex}</p>
-                )}
-                <h3 className="text-lg font-semibold leading-relaxed text-on-surface">{question.prompt}</h3>
+                {question.latex && <p className="mb-2 font-mono text-primary">{question.latex}</p>}
+                <h3 className="text-lg font-semibold leading-relaxed text-on-surface">
+                  {question.prompt}
+                </h3>
               </div>
 
               {question.type === "numeric" ? (
                 <form onSubmit={submitAnswer} className="space-y-3">
-                  <Field label="Jawaban numerik" hint="Gunakan titik (.) untuk desimal. Contoh: 6.4031">
+                  <Field
+                    label="Jawaban numerik"
+                    hint="Gunakan titik (.) untuk desimal. Contoh: 6.4031"
+                  >
                     <div className="flex max-w-xs gap-2">
                       <Input
                         value={answer}
@@ -354,7 +388,12 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
                     </button>
                   ))}
                   <div className="flex justify-end pt-1">
-                    <Button type="submit" loading={checkAnswer.isPending} disabled={!choice} icon="check">
+                    <Button
+                      type="submit"
+                      loading={checkAnswer.isPending}
+                      disabled={!choice}
+                      icon="check"
+                    >
                       Kunci Jawaban
                     </Button>
                   </div>
@@ -366,7 +405,13 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
       </Card>
 
       {lastFeedback && (
-        <Card className={lastFeedback.result.correct ? "border-success/50 bg-success-container/40" : "border-error/50 bg-error-container/40"}>
+        <Card
+          className={
+            lastFeedback.result.correct
+              ? "border-success/50 bg-success-container/40"
+              : "border-error/50 bg-error-container/40"
+          }
+        >
           <CardContent className="p-5">
             <div className="flex items-start gap-3">
               <span
@@ -384,19 +429,33 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
                 </p>
                 {!lastFeedback.result.correct && (
                   <p className="mt-0.5 text-sm text-on-surface-variant">
-                    Jawaban yang benar: <span className="math-mono font-semibold text-on-surface">{lastFeedback.result.expectedAnswer}</span>
+                    Jawaban yang benar:{" "}
+                    <span className="math-mono font-semibold text-on-surface">
+                      {lastFeedback.result.expectedAnswer}
+                    </span>
                   </p>
                 )}
-                <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">{lastFeedback.result.explanation}</p>
+                <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">
+                  {lastFeedback.result.explanation}
+                </p>
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <Badge variant={lastFeedback.result.xpEarned > 0 ? "success" : "neutral"}>
                     <Icon name="star" size={12} />
-                    {lastFeedback.result.xpEarned > 0 ? `+${lastFeedback.result.xpEarned} XP` : "Tanpa XP"}
+                    {lastFeedback.result.xpEarned > 0
+                      ? `+${lastFeedback.result.xpEarned} XP`
+                      : "Tanpa XP"}
                   </Badge>
                   <Badge variant="info">Mastery: {lastFeedback.mastery}%</Badge>
-                  <Badge variant="warning">Berikutnya: {difficultyLabel[lastFeedback.result.nextDifficulty]}</Badge>
-                  <Button className="ms-auto" icon="arrow-right" onClick={handleNext} loading={complete.isPending}>
+                  <Badge variant="warning">
+                    Berikutnya: {difficultyLabel[lastFeedback.result.nextDifficulty]}
+                  </Badge>
+                  <Button
+                    className="ms-auto"
+                    icon="arrow-right"
+                    onClick={handleNext}
+                    loading={complete.isPending}
+                  >
                     {total + 1 >= GOAL ? "Selesaikan" : "Soal Berikutnya"}
                   </Button>
                 </div>

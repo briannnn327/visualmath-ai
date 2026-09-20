@@ -64,10 +64,7 @@ function preprocess(raw: string): string {
   src = src.replace(/,/g, ".");
   src = src.replace(/π/g, "pi").replace(/∞/g, "infinity");
   // pecahan implisit dari unicode superscript sederhana
-  src = src
-    .replace(/²/g, "^2")
-    .replace(/³/g, "^3")
-    .replace(/¹/g, "^1");
+  src = src.replace(/²/g, "^2").replace(/³/g, "^3").replace(/¹/g, "^1");
   return src;
 }
 
@@ -80,9 +77,9 @@ function tokenize(src: string): Token[] {
       let num = "";
       while (i < src.length && /[\d.]/.test(src[i])) num += src[i++];
       if ((num.match(/\./g) ?? []).length > 1)
-        throw new ParseError("Format angka tidak valid: " + num);
+        throw new ParseError(`Format angka tidak valid: ${num}`);
       const value = Number(num);
-      if (!Number.isFinite(value)) throw new ParseError("Angka tidak valid: " + num);
+      if (!Number.isFinite(value)) throw new ParseError(`Angka tidak valid: ${num}`);
       tokens.push({ type: "num", value });
       continue;
     }
@@ -165,12 +162,14 @@ class Parser {
 
   private expectRparen(): void {
     const t = this.next();
-    if (!t || t.type !== "rparen") throw new ParseError("Tanda kurung tidak seimbang");
+    if (t?.type !== "rparen") throw new ParseError("Tanda kurung tidak seimbang");
   }
 
   private expectEnd(): void {
     if (this.pos < this.tokens.length)
-      throw new ParseError(`Ada sisa ekspresi setelah "${this.tokens[this.pos].type}". Periksa operator, misalnya gunakan * eksplisit.`);
+      throw new ParseError(
+        `Ada sisa ekspresi setelah "${this.tokens[this.pos].type}". Periksa operator, misalnya gunakan * eksplisit.`,
+      );
   }
 
   parse(): MathNode {
@@ -179,7 +178,7 @@ class Parser {
     if (this.variables.size > 1) {
       const [first, second] = [...this.variables];
       throw new ParseError(
-        `Ditemukan lebih dari satu variabel (${first}, ${second}). Engine ini mendukung 1 variabel saja.`
+        `Ditemukan lebih dari satu variabel (${first}, ${second}). Engine ini mendukung 1 variabel saja.`,
       );
     }
     return node;
@@ -327,7 +326,7 @@ export function evaluate(node: MathNode, variableValue: number, varName: string)
         case "/":
           return l / r;
         case "^":
-          return Math.pow(l, r);
+          return l ** r;
       }
     }
   }
@@ -420,7 +419,12 @@ export function diff(node: MathNode, varName: string): MathNode | null {
         const a = { kind: "bin", op: "*", left: l, right: node.right } as const;
         const b = { kind: "bin", op: "*", left: node.left, right: r } as const;
         const num = { kind: "bin", op: "-", left: a, right: b } as const;
-        const den = { kind: "bin", op: "^", left: node.right, right: { kind: "num", value: 2 } } as const;
+        const den = {
+          kind: "bin",
+          op: "^",
+          left: node.right,
+          right: { kind: "num", value: 2 },
+        } as const;
         return { kind: "bin", op: "/", left: num, right: den };
       }
       if (node.op === "^") {
@@ -428,7 +432,12 @@ export function diff(node: MathNode, varName: string): MathNode | null {
         if (!dBase) return null;
         if (isConstantNode(node.right)) {
           const n = node.right;
-          const minus = { kind: "bin", op: "-", left: n, right: { kind: "num", value: 1 } } as const;
+          const minus = {
+            kind: "bin",
+            op: "-",
+            left: n,
+            right: { kind: "num", value: 1 },
+          } as const;
           const pow = { kind: "bin", op: "^", left: node.left, right: minus } as const;
           const mult = { kind: "bin", op: "*", left: n, right: pow } as const;
           return { kind: "bin", op: "*", left: mult, right: dBase };
@@ -447,37 +456,77 @@ export function diff(node: MathNode, varName: string): MathNode | null {
       const chain = node.arg;
       switch (node.name) {
         case "sin":
-          return { kind: "bin", op: "*", left: { kind: "fn", name: "cos", arg: chain }, right: dArg };
+          return {
+            kind: "bin",
+            op: "*",
+            left: { kind: "fn", name: "cos", arg: chain },
+            right: dArg,
+          };
         case "cos":
           return {
             kind: "neg",
-            arg: { kind: "bin", op: "*", left: { kind: "fn", name: "sin", arg: chain }, right: dArg },
+            arg: {
+              kind: "bin",
+              op: "*",
+              left: { kind: "fn", name: "sin", arg: chain },
+              right: dArg,
+            },
           };
         case "tan": {
           const cos = { kind: "fn", name: "cos", arg: chain } as const;
-          const denom = { kind: "bin", op: "^", left: cos, right: { kind: "num", value: 2 } } as const;
+          const denom = {
+            kind: "bin",
+            op: "^",
+            left: cos,
+            right: { kind: "num", value: 2 },
+          } as const;
           const num = { kind: "num", value: 1 } as const;
-          return { kind: "bin", op: "*", left: { kind: "bin", op: "/", left: num, right: denom }, right: dArg };
+          return {
+            kind: "bin",
+            op: "*",
+            left: { kind: "bin", op: "/", left: num, right: denom },
+            right: dArg,
+          };
         }
         case "exp":
-          return { kind: "bin", op: "*", left: { kind: "fn", name: "exp", arg: chain }, right: dArg };
+          return {
+            kind: "bin",
+            op: "*",
+            left: { kind: "fn", name: "exp", arg: chain },
+            right: dArg,
+          };
         case "ln":
           return { kind: "bin", op: "/", left: dArg, right: chain };
         case "sqrt": {
           const two = { kind: "num", value: 2 } as const;
-          const twoSqrt = { kind: "bin", op: "*", left: two, right: { kind: "fn", name: "sqrt", arg: chain } } as const;
+          const twoSqrt = {
+            kind: "bin",
+            op: "*",
+            left: two,
+            right: { kind: "fn", name: "sqrt", arg: chain },
+          } as const;
           return { kind: "bin", op: "/", left: dArg, right: twoSqrt };
         }
         case "asin": {
           const one = { kind: "num", value: 1 } as const;
-          const sq = { kind: "bin", op: "^", left: chain, right: { kind: "num", value: 2 } } as const;
+          const sq = {
+            kind: "bin",
+            op: "^",
+            left: chain,
+            right: { kind: "num", value: 2 },
+          } as const;
           const sub = { kind: "bin", op: "-", left: one, right: sq } as const;
           const sqr = { kind: "fn", name: "sqrt", arg: sub } as const;
           return { kind: "bin", op: "/", left: dArg, right: sqr };
         }
         case "atan": {
           const one = { kind: "num", value: 1 } as const;
-          const sq = { kind: "bin", op: "^", left: chain, right: { kind: "num", value: 2 } } as const;
+          const sq = {
+            kind: "bin",
+            op: "^",
+            left: chain,
+            right: { kind: "num", value: 2 },
+          } as const;
           const add = { kind: "bin", op: "+", left: one, right: sq } as const;
           return { kind: "bin", op: "/", left: dArg, right: add };
         }
@@ -491,13 +540,25 @@ export function diff(node: MathNode, varName: string): MathNode | null {
 /* ----------------------------- Pretty print ----------------------------- */
 
 const SUPERSCRIPT: Record<string, string> = {
-  "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
-  "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
-  "-": "⁻", ".": "·",
+  "0": "⁰",
+  "1": "¹",
+  "2": "²",
+  "3": "³",
+  "4": "⁴",
+  "5": "⁵",
+  "6": "⁶",
+  "7": "⁷",
+  "8": "⁸",
+  "9": "⁹",
+  "-": "⁻",
+  ".": "·",
 };
 
 function toSuperscript(value: number): string {
-  return String(value).split("").map((c) => SUPERSCRIPT[c] ?? c).join("");
+  return String(value)
+    .split("")
+    .map((c) => SUPERSCRIPT[c] ?? c)
+    .join("");
 }
 
 function fmtNum(n: number): string {
@@ -534,8 +595,7 @@ export function pretty(n: MathNode): string {
       return `${n.name}(${pretty(n.arg)})`;
     case "bin": {
       if (n.op === "^" && n.right.kind === "num") {
-        const baseStr =
-          precedence(n.left) < 7 ? `(${pretty(n.left)})` : pretty(n.left);
+        const baseStr = precedence(n.left) < 7 ? `(${pretty(n.left)})` : pretty(n.left);
         return `${baseStr}${toSuperscript(Math.round(n.right.value * 1e8) / 1e8)}`;
       }
       const opStr = ` ${n.op === "*" ? "·" : n.op} `;
@@ -590,8 +650,10 @@ function ruleOf(node: MathNode, varName: string): string[] {
     case "bin":
       if (node.op === "+" || node.op === "-")
         return ["linearity", ...ruleOf(node.left, varName), ...ruleOf(node.right, varName)];
-      if (node.op === "*") return ["product", ...ruleOf(node.left, varName), ...ruleOf(node.right, varName)];
-      if (node.op === "/") return ["quotient", ...ruleOf(node.left, varName), ...ruleOf(node.right, varName)];
+      if (node.op === "*")
+        return ["product", ...ruleOf(node.left, varName), ...ruleOf(node.right, varName)];
+      if (node.op === "/")
+        return ["quotient", ...ruleOf(node.left, varName), ...ruleOf(node.right, varName)];
       if (node.op === "^" && node.right.kind === "num")
         return ["power", ...ruleOf(node.left, varName)];
       if (node.op === "^") return ["chain"];
@@ -649,7 +711,8 @@ function diffWithSteps(node: MathNode, varName: string, steps: DerivativeStep[])
         steps.push({
           title: "Pisahkan per suku (linearitas)",
           math: `d/d${varName} ( ${pretty(node)} )`,
-          description: "Turunan dari penjumlahan/pengurangan sama dengan penjumlahan/pengurangan turunan tiap suku.",
+          description:
+            "Turunan dari penjumlahan/pengurangan sama dengan penjumlahan/pengurangan turunan tiap suku.",
         });
         const l = diffWithSteps(node.left, varName, steps);
         const r = diffWithSteps(node.right, varName, steps);
@@ -693,7 +756,8 @@ function diffWithSteps(node: MathNode, varName: string, steps: DerivativeStep[])
         steps.push({
           title: "Bentuk pangkat dinamis — gunakan logaritma natural",
           math: `d/d${varName} ${pretty(node)}`,
-          description: "Fungsi pangkat dengan eksponen variabel diturunkan dengan manipulasi e^(ln f).",
+          description:
+            "Fungsi pangkat dengan eksponen variabel diturunkan dengan manipulasi e^(ln f).",
         });
         return diff(node, varName);
       }
@@ -707,7 +771,7 @@ export function generateSteps(node: MathNode, varName: string): StepOutput {
   steps.push({
     title: "Identifikasi fungsi f(x)",
     math: `f(${varName}) = ${pretty(node)}`,
-    description: "Mari kita tentukan turunan f terhadap variabel " + varName + " langkah demi langkah.",
+    description: `Mari kita tentukan turunan f terhadap variabel ${varName} langkah demi langkah.`,
   });
   const rulesUsed = [...new Set(ruleOf(node, varName))];
   const derivative = diffWithSteps(node, varName, steps);
@@ -715,7 +779,7 @@ export function generateSteps(node: MathNode, varName: string): StepOutput {
     steps.push({
       title: "Hasil akhir",
       math: `f′(${varName}) = ${pretty(derivative)}`,
-      description: `Dengan ${rulesUsed.length > 0 ? "aturan: " + rulesUsed.map((r) => RULE_LABEL[r] ?? r).join("; ") : "identitas turunan dasar"}.`,
+      description: `Dengan ${rulesUsed.length > 0 ? `aturan: ${rulesUsed.map((r) => RULE_LABEL[r] ?? r).join("; ")}` : "identitas turunan dasar"}.`,
     });
   } else {
     steps.push({
@@ -905,15 +969,16 @@ export function analyzeExpression(raw: string, expectedVariable = "x"): Analysis
   if (rules.includes("product"))
     explanationParts.push("terdapat hasil kali dua fungsi sehingga dipakai u′v + uv′");
   explanationParts.push(
-    rules.length > 0 ? "Aturan yang dipakai: " + rules.map((r) => RULE_LABEL[r] ?? r).join("; ") : ""
+    rules.length > 0
+      ? `Aturan yang dipakai: ${rules.map((r) => RULE_LABEL[r] ?? r).join("; ")}`
+      : "",
   );
   if (extrema.length > 0)
     explanationParts.push(
-      `Grafik memiliki ${extrema.length} titik ${extrema[0].kind === "min" ? "minimum/minimum lokal" : "ekstrem"}: f′ berubah tanda di x ≈ ${extrema[0].x.toFixed(2)}.`
+      `Grafik memiliki ${extrema.length} titik ${extrema[0].kind === "min" ? "minimum/minimum lokal" : "ekstrem"}: f′ berubah tanda di x ≈ ${extrema[0].x.toFixed(2)}.`,
     );
 
-  const explanation =
-    explanationParts.filter(Boolean).join(". ") + ".";
+  const explanation = `${explanationParts.filter(Boolean).join(". ")}.`;
 
   return {
     node: root,
@@ -928,7 +993,9 @@ export function analyzeExpression(raw: string, expectedVariable = "x"): Analysis
     text: {
       normalized: raw,
       pretty: pretty(root),
-      derivativePretty: textNode ? pretty(textNode) : "≈ turunan numerik (bentuk simbolik didukung sebagian)",
+      derivativePretty: textNode
+        ? pretty(textNode)
+        : "≈ turunan numerik (bentuk simbolik didukung sebagian)",
       integral,
       integralText,
       steps: steps.steps,
@@ -938,4 +1005,3 @@ export function analyzeExpression(raw: string, expectedVariable = "x"): Analysis
     },
   };
 }
-

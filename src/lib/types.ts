@@ -8,13 +8,7 @@ export type Role = "mahasiswa" | "dosen" | "admin";
 export type Difficulty = "mudah" | "sedang" | "sulit";
 export type QuestionType = "numeric" | "choice" | "truefalse";
 export type MaterialType = "materi" | "soal";
-export type ActivityKind =
-  | "formula"
-  | "quiz"
-  | "lesson"
-  | "auth"
-  | "graph"
-  | "system";
+export type ActivityKind = "formula" | "quiz" | "lesson" | "auth" | "graph" | "system";
 
 /* ---------- Branded types ---------- */
 export type Brand<T, B extends string> = T & { readonly __brand: B };

@@ -1,18 +1,12 @@
 import { redirect } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Icon, type IconName } from "@/components/ui/icon";
-import { getAdminData, getCurrentPublicUser } from "@/lib/server/data";
 import { homeFor } from "@/components/layout/nav";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { roleLabel } from "@/lib/schemas";
-import { cn, formatNumber } from "@/lib/utils";
+import { getAdminData, getCurrentPublicUser } from "@/lib/server/data";
 import type { ActivityLog, Role } from "@/lib/types";
+import { cn, formatNumber } from "@/lib/utils";
 
 const logDateFormat = new Intl.DateTimeFormat("id-ID", {
   dateStyle: "short",
@@ -267,7 +261,7 @@ export default async function AdminDashboardPage() {
                 <span
                   className={cn(
                     "mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl",
-                    severityBg[log.severity]
+                    severityBg[log.severity],
                   )}
                 >
                   <Icon name={severityIcon[log.severity]} size={17} />

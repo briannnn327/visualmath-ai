@@ -1,19 +1,24 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { type FormEvent, useState } from "react";
 import { Logo } from "@/components/brand";
+import { homeFor } from "@/components/layout/nav";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { Input, Field } from "@/components/ui/input";
-import { useAuthStore } from "@/lib/store/authStore";
+import { Field, Input } from "@/components/ui/input";
 import { useToastStore } from "@/components/ui/toast";
-import { homeFor } from "@/components/layout/nav";
+import { useAuthStore } from "@/lib/store/authStore";
 import type { Role } from "@/lib/types";
 
 const demos: Array<{ label: string; role: Role; email: string; password: string }> = [
-  { label: "Mahasiswa", role: "mahasiswa", email: "maria@students.uns.ac.id", password: "maria123" },
+  {
+    label: "Mahasiswa",
+    role: "mahasiswa",
+    email: "maria@students.uns.ac.id",
+    password: "maria123",
+  },
   { label: "Dosen", role: "dosen", email: "dosen@visualmath.ai", password: "dosen123" },
   { label: "Admin", role: "admin", email: "admin@visualmath.ai", password: "admin123" },
 ];
@@ -63,13 +68,18 @@ export default function LoginPage() {
       <main className="relative z-10 flex flex-1 items-center justify-center px-4 py-10">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
-            <h1 className="font-display text-3xl font-extrabold text-on-surface">Masuk ke akunmu</h1>
+            <h1 className="font-display text-3xl font-extrabold text-on-surface">
+              Masuk ke akunmu
+            </h1>
             <p className="mt-2 text-sm text-on-surface-variant">
               Lanjutkan perjalanan belajar kalkulusmu bersama VisualMath AI.
             </p>
           </div>
 
-          <form onSubmit={submit} className="space-y-4 rounded-3xl border border-outline-variant bg-surface p-6 shadow-card">
+          <form
+            onSubmit={submit}
+            className="space-y-4 rounded-3xl border border-outline-variant bg-surface p-6 shadow-card"
+          >
             <Field label="Email" htmlFor="email" required>
               <Input
                 id="email"
@@ -107,7 +117,10 @@ export default function LoginPage() {
             </Field>
 
             {error && (
-              <p role="alert" className="rounded-xl bg-error-container px-4 py-3 text-sm font-medium text-on-error-container">
+              <p
+                role="alert"
+                className="rounded-xl bg-error-container px-4 py-3 text-sm font-medium text-on-error-container"
+              >
                 {error}
               </p>
             )}
@@ -132,7 +145,9 @@ export default function LoginPage() {
                   className="rounded-xl border border-outline-variant bg-surface px-2 py-2 text-center transition-colors hover:border-primary hover:bg-primary-lighter"
                 >
                   <span className="block text-sm font-bold text-primary">{d.label}</span>
-                  <span className="block truncate text-[11px] text-on-surface-variant">{d.email}</span>
+                  <span className="block truncate text-[11px] text-on-surface-variant">
+                    {d.email}
+                  </span>
                 </button>
               ))}
             </div>

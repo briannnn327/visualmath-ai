@@ -1,17 +1,17 @@
 "use client";
 
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 import { Logo } from "@/components/brand";
-import { Icon } from "@/components/ui/icon";
-import { Button } from "@/components/ui/button";
-import { useUIStore } from "@/lib/store/uiStore";
-import { useAuthStore } from "@/lib/store/authStore";
-import { cn, initials, avatarColor } from "@/lib/utils";
-import { roleLabel } from "@/lib/schemas";
 import type { NavItem } from "@/components/layout/nav";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { roleLabel } from "@/lib/schemas";
+import { useAuthStore } from "@/lib/store/authStore";
+import { useUIStore } from "@/lib/store/uiStore";
 import type { PublicUser } from "@/lib/types";
+import { avatarColor, cn, initials } from "@/lib/utils";
 
 function NavLink({
   item,
@@ -33,7 +33,7 @@ function NavLink({
         collapsed && "justify-center px-0",
         active
           ? "bg-primary-container text-on-primary-container"
-          : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
+          : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface",
       )}
     >
       <Icon name={item.icon} size={20} />
@@ -52,7 +52,12 @@ function UserChip({
   onLogout: () => void;
 }) {
   return (
-    <div className={cn("flex items-center gap-3 rounded-2xl transition-opacity", collapsed ? "justify-center" : "p-2")}>
+    <div
+      className={cn(
+        "flex items-center gap-3 rounded-2xl transition-opacity",
+        collapsed ? "justify-center" : "p-2",
+      )}
+    >
       <span
         className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold text-on-primary"
         style={{ backgroundColor: `var(${avatarColor(user.email)})` }}
@@ -107,10 +112,12 @@ export function AppShell({
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-outline-variant bg-surface transition-[width] duration-300 lg:flex",
-          collapsed ? "w-20" : "w-64"
+          collapsed ? "w-20" : "w-64",
         )}
       >
-        <div className={cn("flex h-16 shrink-0 items-center", collapsed ? "justify-center" : "px-5")}>
+        <div
+          className={cn("flex h-16 shrink-0 items-center", collapsed ? "justify-center" : "px-5")}
+        >
           {collapsed ? <Logo compact /> : <Logo />}
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-3 no-scrollbar">
@@ -140,7 +147,12 @@ export function AppShell({
           <aside className="absolute inset-y-0 left-0 flex w-72 flex-col bg-surface shadow-float">
             <div className="flex h-16 shrink-0 items-center justify-between border-b border-outline-variant px-5">
               <Logo />
-              <Button variant="ghost" size="icon-sm" onClick={() => setMobileOpen(false)} aria-label="Tutup menu">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setMobileOpen(false)}
+                aria-label="Tutup menu"
+              >
                 <Icon name="close" size={18} />
               </Button>
             </div>
@@ -183,7 +195,9 @@ export function AppShell({
           >
             <Icon name={collapsed ? "chevron-right" : "chevron-left"} />
           </Button>
-          <h1 className="min-w-0 truncate font-display text-lg font-bold text-on-surface">{title}</h1>
+          <h1 className="min-w-0 truncate font-display text-lg font-bold text-on-surface">
+            {title}
+          </h1>
           <div className="ml-auto flex items-center gap-2">
             <span className="hidden items-center gap-1.5 rounded-full bg-surface-container px-3 py-1 text-xs font-semibold text-on-surface-variant sm:inline-flex">
               <Icon name="sparkle" size={14} className="text-primary" />

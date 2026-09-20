@@ -1,27 +1,27 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { type FormEvent, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input, Field } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Modal } from "@/components/ui/modal";
-import { SkeletonCard } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
+import { Field, Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+import { Select } from "@/components/ui/select";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { useToastStore } from "@/components/ui/toast";
 import {
-  useClasses,
-  useTopics,
-  useMaterials,
-  useCreateMaterial,
-  useUpdateMaterial,
-  useDeleteMaterial,
   type MaterialWithMeta,
+  useClasses,
+  useCreateMaterial,
+  useDeleteMaterial,
+  useMaterials,
+  useTopics,
+  useUpdateMaterial,
 } from "@/lib/hooks/queries";
-import { materialSchema, materialTypeLabel, difficultyLabel } from "@/lib/schemas";
-import { formatDate } from "@/lib/utils";
+import { difficultyLabel, materialSchema, materialTypeLabel } from "@/lib/schemas";
 import type { Difficulty, MaterialType } from "@/lib/types";
+import { formatDate } from "@/lib/utils";
 
 const TYPE_OPTIONS: MaterialType[] = ["materi", "soal"];
 const DIFFICULTY_OPTIONS: Difficulty[] = ["mudah", "sedang", "sulit"];
@@ -138,7 +138,9 @@ export default function DosenMateriPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="font-display text-2xl font-extrabold text-on-surface">Materi Pembelajaran</h2>
+          <h2 className="font-display text-2xl font-extrabold text-on-surface">
+            Materi Pembelajaran
+          </h2>
           <p className="mt-1 text-sm text-on-surface-variant">
             Kelola bahan ajar dan kumpulan soal untuk kelasmu.
           </p>

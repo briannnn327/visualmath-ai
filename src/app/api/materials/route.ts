@@ -1,13 +1,17 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { materialSchema, type MaterialInput, parseBody } from "@/lib/schemas";
+import { NextResponse } from "next/server";
 import { db, ensureSeeded, getKelasById, getTopicById, recordActivity } from "@/lib/db/store";
+import { type MaterialInput, materialSchema, parseBody } from "@/lib/schemas";
 import { apiUser, badRequest, forbidden, notFound, unauthorized } from "@/lib/server/api-auth";
-import { uid } from "@/lib/utils";
 import type { MaterialId, MaterialItem } from "@/lib/types";
+import { uid } from "@/lib/utils";
 
 function withMeta(m: MaterialItem) {
-  return { ...m, topicTitle: getTopicById(m.topicId)?.title ?? "", kelasName: getKelasById(m.kelasId)?.nama ?? "" };
+  return {
+    ...m,
+    topicTitle: getTopicById(m.topicId)?.title ?? "",
+    kelasName: getKelasById(m.kelasId)?.nama ?? "",
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -89,7 +93,13 @@ export async function PATCH(request: NextRequest) {
   if (!valid.success) return badRequest(valid.error.issues[0]?.message ?? "Data tidak valid");
   Object.assign(item, valid.data, { updatedAt: new Date().toISOString() });
 
-  recordActivity({ userId: user.id, actorName: user.name, action: "material.update", target: item.title, severity: "info" });
+  recordActivity({
+    userId: user.id,
+    actorName: user.name,
+    action: "material.update",
+    target: item.title,
+    severity: "info",
+  });
   return NextResponse.json({ material: withMeta(item) });
 }
 
@@ -106,6 +116,12 @@ export async function DELETE(request: NextRequest) {
   const item = db.materials[idx];
   if (item.createdBy !== user.id && user.role !== "admin") return forbidden();
   db.materials.splice(idx, 1);
-  recordActivity({ userId: user.id, actorName: user.name, action: "material.delete", target: item.title, severity: "info" });
+  recordActivity({
+    userId: user.id,
+    actorName: user.name,
+    action: "material.delete",
+    target: item.title,
+    severity: "info",
+  });
   return NextResponse.json({ ok: true });
 }

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useSystemMetrics, useSystemLogs } from "@/lib/hooks/queries";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import type { IconName } from "@/components/ui/icon";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
-import type { IconName } from "@/components/ui/icon";
+import { useSystemLogs, useSystemMetrics } from "@/lib/hooks/queries";
 
 const SEVERITY_OPTIONS = ["Semua", "Info", "Warning", "Error"] as const;
 type SeverityLabel = (typeof SEVERITY_OPTIONS)[number];
@@ -45,9 +45,7 @@ function StatCard({ icon, label, value, color, loading }: StatCardProps) {
   return (
     <Card>
       <CardContent className="flex items-center gap-4 p-5">
-        <div
-          className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${color}`}
-        >
+        <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${color}`}>
           <Icon name={icon} size={22} className="text-on-primary" />
         </div>
         <div className="min-w-0 flex-1">
@@ -96,16 +94,12 @@ const severityVariant: Record<string, "info" | "warning" | "error"> = {
 export default function AdminMonitoringPage() {
   const [severityLabel, setSeverityLabel] = useState<SeverityLabel>("Semua");
   const { data: metrics, isLoading: metricsLoading } = useSystemMetrics();
-  const { data: logs, isLoading: logsLoading } = useSystemLogs(
-    SEVERITY_MAP[severityLabel]
-  );
+  const { data: logs, isLoading: logsLoading } = useSystemLogs(SEVERITY_MAP[severityLabel]);
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-2xl font-extrabold text-on-surface">
-          Monitoring Sistem
-        </h2>
+        <h2 className="font-display text-2xl font-extrabold text-on-surface">Monitoring Sistem</h2>
         <p className="mt-1 text-sm text-on-surface-variant">
           Pantau metrik performa dan log aktivitas sistem secara real-time.
         </p>
@@ -150,20 +144,14 @@ export default function AdminMonitoringPage() {
         <StatCard
           icon="gauge"
           label="Rata-rata Response"
-          value={
-            metricsLoading ? "—" : `${metrics?.avgResponseMs ?? 0} ms`
-          }
+          value={metricsLoading ? "—" : `${metrics?.avgResponseMs ?? 0} ms`}
           color="bg-primary"
           loading={metricsLoading}
         />
         <StatCard
           icon="monitoring"
           label="Uptime"
-          value={
-            metricsLoading
-              ? "—"
-              : formatUptime(metrics?.uptime ?? 0)
-          }
+          value={metricsLoading ? "—" : formatUptime(metrics?.uptime ?? 0)}
           color="bg-success"
           loading={metricsLoading}
         />
@@ -179,16 +167,12 @@ export default function AdminMonitoringPage() {
       <Card>
         <CardContent className="space-y-4 p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="font-display text-lg font-bold text-on-surface">
-              Log Aktivitas
-            </h3>
+            <h3 className="font-display text-lg font-bold text-on-surface">Log Aktivitas</h3>
             <div className="flex flex-wrap gap-2">
               {SEVERITY_OPTIONS.map((label) => (
                 <Button
                   key={label}
-                  variant={
-                    severityLabel === label ? "primary" : "outline"
-                  }
+                  variant={severityLabel === label ? "primary" : "outline"}
                   size="sm"
                   onClick={() => setSeverityLabel(label)}
                 >
@@ -206,11 +190,7 @@ export default function AdminMonitoringPage() {
             </div>
           ) : !logs || logs.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-12 text-center">
-              <Icon
-                name="info"
-                size={40}
-                className="text-on-surface-variant/40"
-              />
+              <Icon name="info" size={40} className="text-on-surface-variant/40" />
               <p className="text-sm text-on-surface-variant">
                 Tidak ada log ditemukan untuk filter ini.
               </p>
@@ -220,21 +200,11 @@ export default function AdminMonitoringPage() {
               <table className="w-full min-w-[700px] text-sm">
                 <thead>
                   <tr className="border-b border-outline-variant bg-surface-container">
-                    <th className="px-4 py-3 text-left font-semibold text-on-surface">
-                      Waktu
-                    </th>
-                    <th className="px-4 py-3 text-left font-semibold text-on-surface">
-                      Pelaku
-                    </th>
-                    <th className="px-4 py-3 text-left font-semibold text-on-surface">
-                      Aksi
-                    </th>
-                    <th className="px-4 py-3 text-left font-semibold text-on-surface">
-                      Target
-                    </th>
-                    <th className="px-4 py-3 text-left font-semibold text-on-surface">
-                      Severity
-                    </th>
+                    <th className="px-4 py-3 text-left font-semibold text-on-surface">Waktu</th>
+                    <th className="px-4 py-3 text-left font-semibold text-on-surface">Pelaku</th>
+                    <th className="px-4 py-3 text-left font-semibold text-on-surface">Aksi</th>
+                    <th className="px-4 py-3 text-left font-semibold text-on-surface">Target</th>
+                    <th className="px-4 py-3 text-left font-semibold text-on-surface">Severity</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -246,21 +216,15 @@ export default function AdminMonitoringPage() {
                       <td className="whitespace-nowrap px-4 py-3 text-xs text-on-surface-variant">
                         {LOG_DATE_FMT.format(new Date(log.createdAt))}
                       </td>
-                      <td className="px-4 py-3 font-medium text-on-surface">
-                        {log.actorName}
-                      </td>
+                      <td className="px-4 py-3 font-medium text-on-surface">{log.actorName}</td>
                       <td className="px-4 py-3">
-                        <Badge variant="neutral">
-                          {actionLabel(log.action)}
-                        </Badge>
+                        <Badge variant="neutral">{actionLabel(log.action)}</Badge>
                       </td>
                       <td className="max-w-[200px] truncate px-4 py-3 text-on-surface-variant">
                         {log.target}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant={severityVariant[log.severity]}>
-                          {log.severity}
-                        </Badge>
+                        <Badge variant={severityVariant[log.severity]}>{log.severity}</Badge>
                       </td>
                     </tr>
                   ))}
