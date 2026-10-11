@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import {
   getKelasById,
   listHistory,
-  listKelas,
   listProgress,
   recordActivity,
   updateUser,
@@ -16,11 +15,7 @@ export async function GET(request: NextRequest) {
   const user = await apiUser(request);
   if (!user) return unauthorized();
 
-  const [progress, history, kelasAll] = await Promise.all([
-    listProgress(),
-    listHistory(),
-    listKelas(),
-  ]);
+  const [progress, history] = await Promise.all([listProgress(), listHistory()]);
   const kelas = user.kelasId ? await getKelasById(user.kelasId) : undefined;
   const stats = {
     totalXp: progress.filter((p) => p.userId === user.id).reduce((s, p) => s + p.xp, 0),

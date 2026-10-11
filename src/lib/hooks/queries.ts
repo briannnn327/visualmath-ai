@@ -19,6 +19,7 @@ import type {
   MaterialItem,
   PublicUser,
   Question,
+  RagCitation,
   Topic,
 } from "@/lib/types";
 
@@ -151,6 +152,28 @@ export function useCompleteExercise() {
   });
 }
 
+export interface ExerciseAIResult {
+  text: string;
+  keyPoints: string[];
+  source: "ai" | "static";
+  model?: string;
+  references: RagCitation[];
+}
+
+export function useExerciseHint() {
+  return useMutation({
+    mutationFn: (input: { questionId: string; topicId: string }) =>
+      api.post<{ help: ExerciseAIResult }>("/api/exercises/hint", input),
+  });
+}
+
+export function useExerciseExplain() {
+  return useMutation({
+    mutationFn: (input: { questionId: string; topicId: string }) =>
+      api.post<{ help: ExerciseAIResult }>("/api/exercises/explain", input),
+  });
+}
+
 /* ---------- Materi (dosen & admin) ---------- */
 
 export function useMaterials(kelasId: string | null = null) {
@@ -193,6 +216,42 @@ export function useDeleteMaterial() {
     mutationFn: (id: string) => api.del<{ ok: boolean }>("/api/materials", { id }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["materials"] });
+    },
+  });
+}
+
+export interface EmbeddingStatus {
+  total: number;
+  embedded: number;
+  missing: number;
+  aiConfigured: boolean;
+}
+
+export interface BackfillSummary {
+  total: number;
+  processed: number;
+  embedded: number;
+  failed: number;
+  skipped: number;
+  aiConfigured: boolean;
+}
+
+export function useEmbeddingStatus(enabled = true) {
+  return useQuery({
+    queryKey: ["embedding-status"],
+    enabled,
+    queryFn: async () =>
+      (await api.get<{ status: EmbeddingStatus }>("/api/materials/embeddings")).status,
+  });
+}
+
+export function useBackfillEmbeddings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { onlyMissing?: boolean } = {}) =>
+      api.post<{ summary: BackfillSummary }>("/api/materials/embeddings", input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["embedding-status"] });
     },
   });
 }

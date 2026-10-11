@@ -216,6 +216,115 @@ export async function explainAnalysis(
 }
 
 /* =========================================================
+   Latihan soal — hint & pembahasan berbasis RAG
+   ========================================================= */
+
+export interface ExerciseHelpInput {
+  mode: "hint" | "explain";
+  prompt: string;
+  latex?: string | null;
+  type?: string;
+  expectedAnswer: string;
+  explanation: string;
+}
+
+export interface AIExerciseHelpResult {
+  text: string;
+  keyPoints: string[];
+  model: string;
+}
+
+const HINT_SYSTEM = [
+  "Kamu adalah tutor kalkulus yang membimbing mahasiswa S1 Indonesia.",
+  "Beri PETUNJUK bertahap: petakan konsep/rumus/aturan yang perlu dipakai agar mahasiswa bisa mengerjakan sendiri.",
+  "JANGAN menuliskan jawaban akhir atau angka hasil akhirnya.",
+  "Maksimal ~3 kalimat, bahasa jelas dan memotivasi.",
+  "Bila ada REFERENSI MATERI KULIAH, gunakan istilah & pendekatan sesuai referensi itu.",
+  "Kembalikan jawaban sebagai JSON sesuai skema.",
+].join(" ");
+
+const EXPLAIN_SYSTEM = [
+  "Kamu adalah tutor kalkulus untuk mahasiswa S1 Indonesia.",
+  "Jelaskan langkah penyelesaian soal dengan mengacu pada pembahasan inti yang diberikan.",
+  "JANGAN menghitung ulang dan JANGAN mengubah angka apa pun dari data yang diberikan.",
+  "Gunakan Bahasa Indonesia yang jelas dan ringkas (maksimal ~3 paragraf).",
+  "Bila ada REFERENSI MATERI KULIAH, kaitkan penjelasan dengan referensi itu.",
+  "Kembalikan jawaban sebagai JSON sesuai skema.",
+].join(" ");
+
+const HELP_SCHEMA = {
+  type: "object",
+  properties: {
+    explanation: {
+      type: "string",
+      description:
+        "Penjelasan/petunjuk dalam Bahasa Indonesia, tanpa mengubah angka dari data yang diberikan.",
+    },
+    keyPoints: {
+      type: "array",
+      description: "0-3 poin kunci singkat (opsional).",
+      items: { type: "string" },
+    },
+  },
+  required: ["explanation"],
+} as const;
+
+function buildHelpContext(input: ExerciseHelpInput, reference?: string | null): string {
+  const lines: string[] = [];
+  lines.push(`Soal: ${input.prompt}`);
+  if (input.latex) lines.push(`LaTeX: ${input.latex}`);
+  lines.push(`Tipe soal: ${input.type ?? "numeric"}`);
+  lines.push(`Jawaban benar (fakta, jangan diubah): ${input.expectedAnswer}`);
+  lines.push(`Pembahasan inti dari bank soal (fakta, jangan diubah): ${input.explanation}`);
+  if (reference && reference.trim().length > 0) {
+    lines.push(
+      "REFERENSI MATERI KULIAH (pakai istilah & pendekatan sesuai ini, jangan mengarang di luar referensi):",
+      reference.trim(),
+    );
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Hasilkan petunjuk ("hint") atau pembahasan ("explain") untuk soal latihan.
+ * Mengembalikan null bila AI tidak dikonfigurasi; melempar error bila panggilan gagal.
+ */
+export async function exerciseHelp(
+  input: ExerciseHelpInput,
+  config: AIConfig | null,
+  reference?: string | null,
+): Promise<AIExerciseHelpResult | null> {
+  if (!isAIConfigured()) return null;
+
+  const model = resolveModel(config?.model);
+  const systemPrompt = [
+    input.mode === "hint" ? HINT_SYSTEM : EXPLAIN_SYSTEM,
+    config?.systemPrompt?.trim(),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  const response = await withRetry(() =>
+    getClient().models.generateContent({
+      model,
+      contents: buildHelpContext(input, reference),
+      config: {
+        systemInstruction: systemPrompt,
+        temperature: clamp(config?.temperature ?? 0.4, 0, 2),
+        maxOutputTokens: clamp(config?.maxTokens ?? 1024, 256, 4096),
+        responseMimeType: "application/json",
+        responseJsonSchema: HELP_SCHEMA,
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    }),
+  );
+
+  const parsed = parseResult(response.text);
+  if (!parsed) return null;
+  return { text: parsed.explanation, keyPoints: parsed.keyPoints, model };
+}
+
+/* =========================================================
    OCR / Vision — baca soal dari foto
    ========================================================= */
 

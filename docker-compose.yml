@@ -1,0 +1,22 @@
+# Docker Compose — PostgreSQL + pgvector untuk VisualMath AI.
+# Volume bernama "visualmath_pgdata" dipertahankan (external) agar data lama tetap ada.
+# Jalankan: docker compose up -d
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: visualmath-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: visualmath
+      POSTGRES_PASSWORD: visualmath
+      POSTGRES_DB: visualmath
+      PGDATA: /var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    volumes:
+      - visualmath_pgdata:/var/lib/postgresql/data
+
+volumes:
+  visualmath_pgdata:
+    name: visualmath_pgdata
+    external: true

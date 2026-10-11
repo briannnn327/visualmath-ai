@@ -12,9 +12,11 @@ import { SkeletonCard } from "@/components/ui/skeleton";
 import { useToastStore } from "@/components/ui/toast";
 import {
   type MaterialWithMeta,
+  useBackfillEmbeddings,
   useClasses,
   useCreateMaterial,
   useDeleteMaterial,
+  useEmbeddingStatus,
   useMaterials,
   useTopics,
   useUpdateMaterial,
@@ -55,6 +57,8 @@ export default function DosenMateriPage() {
   const createMaterial = useCreateMaterial();
   const updateMaterial = useUpdateMaterial();
   const deleteMaterial = useDeleteMaterial();
+  const embedding = useEmbeddingStatus();
+  const backfill = useBackfillEmbeddings();
   const pushToast = useToastStore((s) => s.push);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -134,6 +138,18 @@ export default function DosenMateriPage() {
     }
   }
 
+  async function runBackfill(onlyMissing: boolean) {
+    try {
+      const { summary } = await backfill.mutateAsync({ onlyMissing });
+      pushToast(
+        summary.failed > 0 ? "warning" : "success",
+        `Embedding selesai: ${summary.embedded} berhasil, ${summary.failed} gagal, ${summary.skipped} dilewati.`,
+      );
+    } catch (err) {
+      pushToast("error", err instanceof Error ? err.message : "Gagal menghitung embedding");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -175,6 +191,43 @@ export default function DosenMateriPage() {
           </Badge>
         )}
       </div>
+
+      <Card>
+        <CardContent className="flex flex-wrap items-center gap-3 p-4">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-tertiary-container text-on-tertiary-container">
+            <Icon name="layers" size={20} />
+          </span>
+          <div>
+            <p className="font-display text-sm font-bold text-on-surface">Embedding materi (RAG)</p>
+            <p className="text-xs text-on-surface-variant">
+              {embedding.isPending
+                ? "Memuat status…"
+                : embedding.data
+                  ? `${embedding.data.embedded}/${embedding.data.total} materi siap untuk pencarian AI (RAG)`
+                  : "Status embedding tidak tersedia"}
+            </p>
+          </div>
+          <div className="ms-auto flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              icon="refresh"
+              loading={backfill.isPending}
+              onClick={() => runBackfill(true)}
+            >
+              Hitung yang kosong
+            </Button>
+            <Button
+              size="sm"
+              icon="sparkle"
+              loading={backfill.isPending}
+              onClick={() => runBackfill(false)}
+            >
+              Hitung semua
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {classes.isError && (
         <Card>

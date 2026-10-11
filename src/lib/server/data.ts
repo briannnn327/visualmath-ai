@@ -286,9 +286,6 @@ export async function getAdminData(): Promise<AdminDashboardData> {
 
   const todayLogs = logs.filter((l) => new Date(l.createdAt).getTime() >= todayMs);
   const distinctUsers = new Set(todayLogs.map((l) => l.userId?.toString() ?? "sistem"));
-  const aiToday = logs.filter(
-    (l) => new Date(l.createdAt).getTime() >= todayMs && /ai\.|quiz\.|graph\./.test(l.action),
-  ).length;
   const todayHistory = history.filter(
     (h) => h.userId === "u-m0" && new Date(h.createdAt).getTime() >= todayMs,
   );

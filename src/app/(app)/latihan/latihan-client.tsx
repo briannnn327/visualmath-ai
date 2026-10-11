@@ -10,7 +10,15 @@ import { Field, Input } from "@/components/ui/input";
 import { Ring } from "@/components/ui/ring";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 import { useToastStore } from "@/components/ui/toast";
-import { useCheckAnswer, useCompleteExercise, useQuestion, useTopics } from "@/lib/hooks/queries";
+import {
+  type ExerciseAIResult,
+  useCheckAnswer,
+  useCompleteExercise,
+  useExerciseExplain,
+  useExerciseHint,
+  useQuestion,
+  useTopics,
+} from "@/lib/hooks/queries";
 import { difficultyLabel } from "@/lib/schemas";
 import { useExerciseStore } from "@/lib/store/exerciseStore";
 import type { AnswerResult, Difficulty } from "@/lib/types";
@@ -38,6 +46,8 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
   const topics = useTopics();
   const checkAnswer = useCheckAnswer();
   const complete = useCompleteExercise();
+  const hintHelp = useExerciseHint();
+  const explainHelp = useExerciseExplain();
   const pushToast = useToastStore((s) => s.push);
 
   const active = useExerciseStore((s) => s.active);
@@ -51,10 +61,13 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
   const [lastFeedback, setLastFeedback] = useState<{
     result: AnswerResult;
     mastery: number;
+    questionId: string;
   } | null>(null);
   const [answer, setAnswer] = useState("");
   const [choice, setChoice] = useState("");
   const [showHint, setShowHint] = useState(false);
+  const [hint, setHint] = useState<ExerciseAIResult | null>(null);
+  const [enriched, setEnriched] = useState<ExerciseAIResult | null>(null);
   const [preselect] = useState(initialTopicId);
 
   const questionQuery = useQuestion(topicId, difficulty, active);
@@ -66,6 +79,9 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
     setLastFeedback(null);
     setAnswer("");
     setChoice("");
+    setShowHint(false);
+    setHint(null);
+    setEnriched(null);
   }
 
   async function finish(
@@ -118,9 +134,36 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
         answer: userAnswer,
         timeMs: 0,
       });
-      setLastFeedback({ result, mastery });
+      setLastFeedback({ result, mastery, questionId: question.id });
+      setEnriched(null);
+      // Perkaya pembahasan dengan konteks materi (RAG) di latar belakang.
+      explainHelp
+        .mutateAsync({
+          questionId: question.id,
+          // biome-ignore lint/style/noNonNullAssertion: halaman hanya diakses dari dalam topik.
+          topicId: topicId!,
+        })
+        .then(({ help }) => setEnriched(help))
+        .catch(() => {
+          /* pakai pembahasan bank soal bila AI/RAG tidak tersedia */
+        });
     } catch (err) {
       pushToast("error", err instanceof Error ? err.message : "Gagal memeriksa jawaban");
+    }
+  }
+
+  async function loadHint() {
+    if (showHint) {
+      setShowHint(false);
+      return;
+    }
+    setShowHint(true);
+    if (hint || !question || !topicId) return;
+    try {
+      const { help } = await hintHelp.mutateAsync({ questionId: question.id, topicId });
+      setHint(help);
+    } catch {
+      /* biarkan fallback bank soal tampil */
     }
   }
 
@@ -139,6 +182,8 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
     setAnswer("");
     setChoice("");
     setShowHint(false);
+    setHint(null);
+    setEnriched(null);
     if (willFinish) await finish("selesai", snapshot);
   }
 
@@ -345,19 +390,22 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
                       </Button>
                     </div>
                   </Field>
-                  {question.hint && (
-                    <button
-                      type="button"
-                      onClick={() => setShowHint((v) => !v)}
-                      className="flex items-center gap-1.5 text-sm font-semibold text-primary"
-                    >
-                      <Icon name="lightbulb" size={15} />
-                      {showHint ? "Sembunyikan petunjuk" : "Lihat petunjuk"}
-                    </button>
-                  )}
-                  {showHint && question.hint && (
+                  <button
+                    type="button"
+                    onClick={loadHint}
+                    className="flex items-center gap-1.5 text-sm font-semibold text-primary"
+                  >
+                    <Icon name="lightbulb" size={15} />
+                    {showHint ? "Sembunyikan petunjuk" : "Lihat petunjuk"}
+                  </button>
+                  {showHint && (
                     <p className="rounded-xl bg-info-container px-4 py-3 text-sm text-on-info-container">
-                      💡 {question.hint}
+                      💡{" "}
+                      {hintHelp.isPending
+                        ? "Menyusun petunjuk…"
+                        : (hint?.text ??
+                          question.hint ??
+                          "Pelajari kembali konsep pada topik ini.")}
                     </p>
                   )}
                 </form>
@@ -436,8 +484,26 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
                   </p>
                 )}
                 <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">
-                  {lastFeedback.result.explanation}
+                  {enriched?.text ?? lastFeedback.result.explanation}
                 </p>
+                {enriched?.source === "ai" && (
+                  <Badge variant="primary" className="mt-2">
+                    <Icon name="sparkle" size={12} />
+                    Dibantu AI{enriched.model ? ` · ${enriched.model}` : ""}
+                  </Badge>
+                )}
+                {enriched?.keyPoints && enriched.keyPoints.length > 0 && (
+                  <ul className="mt-2 list-disc space-y-0.5 ps-5 text-sm text-on-surface-variant">
+                    {enriched.keyPoints.map((k) => (
+                      <li key={k}>{k}</li>
+                    ))}
+                  </ul>
+                )}
+                {enriched?.references && enriched.references.length > 0 && (
+                  <p className="mt-2 text-xs text-on-surface-variant">
+                    Sumber materi: {enriched.references.map((r) => r.title).join(", ")}
+                  </p>
+                )}
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <Badge variant={lastFeedback.result.xpEarned > 0 ? "success" : "neutral"}>

@@ -204,6 +204,17 @@ export interface FormulaAnalysis {
   aiModel?: string;
   /** Poin-poin kunci tambahan dari LLM. */
   keyPoints?: string[];
+  /** Materi kuliah (RAG) yang dipakai sebagai referensi penjelasan. */
+  references?: RagCitation[];
+}
+
+/** Sumber materi (hasil retrieval pgvector) yang dipakai sebagai referensi AI. */
+export interface RagCitation {
+  id: string;
+  title: string;
+  topicId: string | null;
+  topicTitle: string | null;
+  similarity: number;
 }
 
 /* ---------- Latihan adaptif ---------- */

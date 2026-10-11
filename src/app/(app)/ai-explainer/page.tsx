@@ -335,6 +335,38 @@ export default function AIExplainerPage() {
                 </CardContent>
               </Card>
 
+              {result.references && result.references.length > 0 && (
+                <Card>
+                  <CardHeader className="flex-row items-center gap-2">
+                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-tertiary-container text-on-tertiary-container">
+                      <Icon name="book" size={17} />
+                    </span>
+                    <div>
+                      <CardTitle>Sumber Materi</CardTitle>
+                      <CardDescription>Materi kuliah yang dipakai AI (RAG).</CardDescription>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2 pt-5">
+                    {result.references.map((ref) => (
+                      <div
+                        key={ref.id}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-outline-variant bg-surface p-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-on-surface">
+                            {ref.title}
+                          </p>
+                          {ref.topicTitle && (
+                            <p className="text-xs text-on-surface-variant">{ref.topicTitle}</p>
+                          )}
+                        </div>
+                        <Badge variant="tertiary">{Math.round(ref.similarity * 100)}% cocok</Badge>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
               <Card>
                 <CardHeader className="flex-row items-center justify-between">
                   <div>

@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { explainAnalysis } from "@/lib/ai/gemini";
-import { buildReference, searchMaterials } from "@/lib/ai/rag";
+import { buildReference, searchMaterials, toCitations } from "@/lib/ai/rag";
 import {
   addHistory,
   createFormula,
@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
         limit: 4,
       });
       const reference = chunks.length > 0 ? buildReference(chunks) : null;
+      if (chunks.length > 0) analysis.references = toCitations(chunks);
       const ai = await explainAnalysis(analysis, cfg, reference);
       if (ai) {
         analysis.explanation = ai.explanation;

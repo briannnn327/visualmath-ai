@@ -933,7 +933,7 @@ export function analyzeExpression(raw: string, expectedVariable = "x"): Analysis
       }
       const xE = (lo + hi) / 2;
       const yE = f(xE);
-      const kind = da > 0 ? "min" : "maks";
+      const kind = da > 0 ? "maks" : "min";
       if (!extrema.some((e) => Math.abs(e.x - xE) < STEP)) {
         extrema.push({ kind, x: xE, y: yE });
       }

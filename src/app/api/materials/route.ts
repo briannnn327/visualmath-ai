@@ -12,9 +12,10 @@ import {
 } from "@/lib/db/store";
 import { type MaterialInput, materialSchema, parseBody } from "@/lib/schemas";
 import { apiUser, badRequest, forbidden, notFound, unauthorized } from "@/lib/server/api-auth";
+import type { MaterialItem } from "@/lib/types";
 import { uid } from "@/lib/utils";
 
-async function withMeta(m: any) {
+async function withMeta(m: MaterialItem) {
   const [topic, kelas] = await Promise.all([getTopicById(m.topicId), getKelasById(m.kelasId)]);
   return {
     ...m,
@@ -76,9 +77,12 @@ export async function POST(request: NextRequest) {
     severity: "info",
   });
 
-  void upsertMaterialEmbedding(item.id, materialEmbeddingText(item.title, item.content));
+  const embedded = await upsertMaterialEmbedding(
+    item.id,
+    materialEmbeddingText(item.title, item.content),
+  );
 
-  return NextResponse.json({ material: await withMeta(item) }, { status: 201 });
+  return NextResponse.json({ material: { ...(await withMeta(item)), embedded } }, { status: 201 });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -109,8 +113,13 @@ export async function PATCH(request: NextRequest) {
     target: updated.title,
     severity: "info",
   });
-  void upsertMaterialEmbedding(updated.id, materialEmbeddingText(updated.title, updated.content));
-  return NextResponse.json({ material: await withMeta(updated) });
+
+  const embedded = await upsertMaterialEmbedding(
+    updated.id,
+    materialEmbeddingText(updated.title, updated.content),
+  );
+
+  return NextResponse.json({ material: { ...(await withMeta(updated)), embedded } });
 }
 
 export async function DELETE(request: NextRequest) {

@@ -80,6 +80,13 @@ export const exerciseAnswerSchema = z.object({
 
 export type ExerciseAnswerInput = z.infer<typeof exerciseAnswerSchema>;
 
+export const exerciseHelpSchema = z.object({
+  questionId: z.string().min(1),
+  topicId: z.string().min(1),
+});
+
+export type ExerciseHelpInput = z.infer<typeof exerciseHelpSchema>;
+
 export const exerciseStartSchema = z.object({
   topicId: z.string().min(1),
 });
