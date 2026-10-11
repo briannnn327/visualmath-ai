@@ -1,10 +1,18 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { addHistory, db, ensureSeeded, recordActivity } from "@/lib/db/store";
+import { explainAnalysis } from "@/lib/ai/gemini";
+import { buildReference, searchMaterials } from "@/lib/ai/rag";
+import {
+  addHistory,
+  createFormula,
+  getAIConfig,
+  listFormulasByUser,
+  recordActivity,
+} from "@/lib/db/store";
 import { analyzeExpression, ParseError } from "@/lib/math/parser";
 import { type FormulaInput, formulaInputSchema } from "@/lib/schemas";
 import { apiUser, badRequest, unauthorized } from "@/lib/server/api-auth";
-import type { FormulaAnalysis, FormulaId, FormulaRecord } from "@/lib/types";
+import type { FormulaAnalysis, FormulaRecord } from "@/lib/types";
 import { uid } from "@/lib/utils";
 
 function toAnalysis(source: string, variable?: string): FormulaAnalysis {
@@ -26,12 +34,12 @@ function toAnalysis(source: string, variable?: string): FormulaAnalysis {
     variable: r.text.variable,
     points: r.numbers.points,
     derivativePoints: r.numbers.derivativePoints,
+    explanationSource: "mesin",
   };
 }
 
 export async function POST(request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(request);
+  const user = await apiUser(request);
   if (!user) return unauthorized();
 
   let body: unknown;
@@ -55,8 +63,7 @@ export async function POST(request: NextRequest) {
     return badRequest("Gagal mengurai ekspresi matematika");
   }
 
-  /* Penghambat fitur dari konfigurasi AI (admin) */
-  const cfg = db.aiConfig;
+  const cfg = await getAIConfig();
   const stepExplain = cfg?.features.stepExplain ?? true;
   if (!stepExplain) {
     analysis.steps = [
@@ -69,25 +76,45 @@ export async function POST(request: NextRequest) {
     ];
   }
 
-  const record: FormulaRecord = {
-    id: uid("f-") as FormulaId,
+  if (stepExplain) {
+    try {
+      const query = `${analysis.pretty} — aturan: ${analysis.rulesUsed.join(", ")}`;
+      const chunks = await searchMaterials(query, {
+        topicId: input.topicId ?? null,
+        limit: 4,
+      });
+      const reference = chunks.length > 0 ? buildReference(chunks) : null;
+      const ai = await explainAnalysis(analysis, cfg, reference);
+      if (ai) {
+        analysis.explanation = ai.explanation;
+        analysis.keyPoints = ai.keyPoints;
+        analysis.explanationSource = "ai";
+        analysis.aiModel = ai.model;
+      }
+    } catch (err) {
+      console.warn(
+        "[ai] Penjelasan Gemini gagal; memakai narasi mesin lokal:",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  const record: FormulaRecord = await createFormula({
+    id: uid("f-"),
     userId: user.id,
     expression: input.expression,
     display: analysis.pretty,
-    topicId: input.topicId as FormulaRecord["topicId"],
-    createdAt: new Date().toISOString(),
-  };
-  db.formulas.push(record);
-  if (db.formulas.length > 60) db.formulas.shift();
+    topicId: input.topicId,
+  });
 
-  addHistory({
+  await addHistory({
     userId: user.id,
     kind: "formula",
     title: `Analisis: f(x) = ${analysis.pretty}`,
     summary: `AI Step Explainer: ${analysis.steps.length} langkah, ${analysis.roots.length} akar, ${analysis.extrema.length} titik ekstrem.`,
     xp: 25,
   });
-  recordActivity({
+  await recordActivity({
     userId: user.id,
     actorName: user.name,
     action: "ai.explain",
@@ -99,12 +126,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(request);
+  const user = await apiUser(request);
   if (!user) return unauthorized();
-  const records = db.formulas
-    .filter((f) => f.userId === user.id)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .slice(0, 8);
-  return NextResponse.json({ records });
+  const records = await listFormulasByUser(user.id);
+  return NextResponse.json({ records: records.slice(0, 8) });
 }

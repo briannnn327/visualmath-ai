@@ -12,10 +12,10 @@ function homeFor(role: Role): string {
   return role === "dosen" ? "/dosen" : role === "admin" ? "/admin" : "/dashboard";
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("vma_session")?.value;
-  const session = getSession(token);
+  const session = await getSession(token);
   const role = session?.role;
 
   const isStudentRoute = STUDENT_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

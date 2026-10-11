@@ -61,6 +61,16 @@ export const formulaInputSchema = z.object({
 
 export type FormulaInput = z.infer<typeof formulaInputSchema>;
 
+export const scanInputSchema = z.object({
+  image: z
+    .string()
+    .min(32, "Gambar tidak valid")
+    .max(8_000_000, "Ukuran gambar terlalu besar (maks sekitar 6 MB)")
+    .refine((v) => v.startsWith("data:image/"), "Format gambar tidak didukung"),
+});
+
+export type ScanInput = z.infer<typeof scanInputSchema>;
+
 export const exerciseAnswerSchema = z.object({
   questionId: z.string().min(1),
   topicId: z.string().min(1),

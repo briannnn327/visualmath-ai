@@ -1,6 +1,15 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { db, ensureSeeded, getUserById, recordActivity } from "@/lib/db/store";
+import {
+  createKelas,
+  deleteKelas,
+  getKelasById,
+  getUserById,
+  listKelas,
+  listProgress,
+  recordActivity,
+  updateKelas,
+} from "@/lib/db/store";
 import { type ClassInput, classInputSchema, parseBody } from "@/lib/schemas";
 import {
   apiUser,
@@ -11,11 +20,12 @@ import {
   unauthorized,
 } from "@/lib/server/api-auth";
 import { getKelasRoster } from "@/lib/server/data";
-import type { Kelas, KelasId, UserId } from "@/lib/types";
+import type { Kelas } from "@/lib/types";
 import { uid } from "@/lib/utils";
 
-function withStats(k: Kelas) {
-  const rows = db.progress.filter((p) => k.mahasiswaIds.includes(p.userId));
+async function withStats(k: Kelas) {
+  const progress = await listProgress();
+  const rows = progress.filter((p) => k.mahasiswaIds.includes(p.userId));
   return {
     ...k,
     studentCount: k.mahasiswaIds.length,
@@ -26,36 +36,36 @@ function withStats(k: Kelas) {
 }
 
 export async function GET(request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(request);
+  const user = await apiUser(request);
   if (!user) return unauthorized();
   if (user.role !== "dosen" && user.role !== "admin") return forbidden();
 
   const detail = request.nextUrl.searchParams.get("detail");
   if (detail) {
-    const kelas = db.kelas.find((k) => k.id === detail);
+    const kelas = await getKelasById(detail);
     if (!kelas) return notFound("Kelas tidak ditemukan");
     if (user.role !== "admin" && kelas.dosenId !== user.id) return forbidden();
-    const roster = getKelasRoster(kelas).map((r) => ({
+    const roster = (await getKelasRoster(kelas)).map((r) => ({
       user: toPublicUser(r.user),
       rows: r.rows,
       avg: r.avg,
       xp: r.xp,
       lastActive: r.lastActive,
     }));
-    return NextResponse.json({ classes: [withStats(kelas)], roster });
+    return NextResponse.json({ classes: [await withStats(kelas)], roster });
   }
 
-  const list = db.kelas
+  const all = await listKelas();
+  const list = all
     .filter((k) => user.role === "admin" || k.dosenId === user.id)
-    .map(withStats)
-    .sort((a, b) => a.nama.localeCompare(b.nama));
-  return NextResponse.json({ classes: list });
+    .map(async (k) => withStats(k));
+  const classes = await Promise.all(list);
+  classes.sort((a, b) => a.nama.localeCompare(b.nama));
+  return NextResponse.json({ classes });
 }
 
 export async function POST(request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(request);
+  const user = await apiUser(request);
   if (!user) return unauthorized();
   if (user.role !== "dosen" && user.role !== "admin") return forbidden();
 
@@ -71,33 +81,30 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     return badRequest(err instanceof Error ? err.message : "Data tidak valid");
   }
-  if (!getUserById(input.dosenId)) return badRequest("Dosen tidak ditemukan");
+  if (!(await getUserById(input.dosenId))) return badRequest("Dosen tidak ditemukan");
 
-  if (db.kelas.some((k) => k.kode.toLowerCase() === input.kode.toLowerCase()))
+  const all = await listKelas();
+  if (all.some((k) => k.kode.toLowerCase() === input.kode.toLowerCase()))
     return badRequest("Kode kelas sudah dipakai");
 
-  const kelas: Kelas = {
-    id: uid("k-") as KelasId,
+  const kelas = await createKelas({
+    id: uid("k-"),
     kode: input.kode.toUpperCase(),
     nama: input.nama,
-    dosenId: input.dosenId as UserId,
-    mahasiswaIds: [],
-    createdAt: new Date().toISOString(),
-  };
-  db.kelas.push(kelas);
-  recordActivity({
+    dosenId: input.dosenId,
+  });
+  await recordActivity({
     userId: user.id,
     actorName: user.name,
     action: "class.create",
     target: kelas.kode,
     severity: "info",
   });
-  return NextResponse.json({ class: withStats(kelas) }, { status: 201 });
+  return NextResponse.json({ class: await withStats(kelas) }, { status: 201 });
 }
 
 export async function PATCH(request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(request);
+  const user = await apiUser(request);
   if (!user) return unauthorized();
   if (user.role !== "dosen" && user.role !== "admin") return forbidden();
 
@@ -108,27 +115,31 @@ export async function PATCH(request: NextRequest) {
     return badRequest("Request body tidak valid");
   }
   const { id, ...patch } = body as ClassInput & { id: string };
-  const kelas = db.kelas.find((k) => k.id === id);
+  const kelas = await getKelasById(id);
   if (!kelas) return notFound("Kelas tidak ditemukan");
   if (kelas.dosenId !== user.id && user.role !== "admin") return forbidden();
 
-  if (patch.kode) kelas.kode = patch.kode.toUpperCase();
-  if (patch.nama) kelas.nama = patch.nama;
-  if (patch.dosenId && getUserById(patch.dosenId)) kelas.dosenId = patch.dosenId as UserId;
+  const update: any = {};
+  if (patch.kode) update.kode = patch.kode.toUpperCase();
+  if (patch.nama) update.nama = patch.nama;
+  if (patch.dosenId) {
+    const dosen = await getUserById(patch.dosenId);
+    if (dosen) update.dosenId = patch.dosenId;
+  }
+  const updated = await updateKelas(kelas.id, update);
 
-  recordActivity({
+  await recordActivity({
     userId: user.id,
     actorName: user.name,
     action: "class.update",
-    target: kelas.kode,
+    target: updated.kode,
     severity: "info",
   });
-  return NextResponse.json({ class: withStats(kelas) });
+  return NextResponse.json({ class: await withStats(updated) });
 }
 
 export async function DELETE(request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(request);
+  const user = await apiUser(request);
   if (!user) return unauthorized();
   if (user.role !== "admin") return forbidden();
 
@@ -139,10 +150,10 @@ export async function DELETE(request: NextRequest) {
     return badRequest("Request body tidak valid");
   }
   const { id } = (body ?? {}) as { id?: string };
-  const idx = db.kelas.findIndex((k) => k.id === id);
-  if (idx < 0) return notFound("Kelas tidak ditemukan");
-  db.kelas.splice(idx, 1);
-  recordActivity({
+  const kelas = await getKelasById(String(id));
+  if (!kelas) return notFound("Kelas tidak ditemukan");
+  await deleteKelas(kelas.id);
+  await recordActivity({
     userId: user.id,
     actorName: user.name,
     action: "class.delete",

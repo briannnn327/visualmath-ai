@@ -1,24 +1,23 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { db, ensureSeeded } from "@/lib/db/store";
+import { listQuestions, listTopics } from "@/lib/db/store";
 import { apiUser, unauthorized } from "@/lib/server/api-auth";
 
 export async function GET(_request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(_request);
+  const user = await apiUser(_request);
   if (!user) return unauthorized();
 
-  const topics = [...db.topics]
+  const [topics, questions] = await Promise.all([listTopics(), listQuestions()]);
+  const result = topics
     .sort((a, b) => a.order - b.order)
     .map((t) => {
       const counts = {
-        mudah: db.questions.filter((qs) => qs.topicId === t.id && qs.difficulty === "mudah").length,
-        sedang: db.questions.filter((qs) => qs.topicId === t.id && qs.difficulty === "sedang")
-          .length,
-        sulit: db.questions.filter((qs) => qs.topicId === t.id && qs.difficulty === "sulit").length,
+        mudah: questions.filter((qs) => qs.topicId === t.id && qs.difficulty === "mudah").length,
+        sedang: questions.filter((qs) => qs.topicId === t.id && qs.difficulty === "sedang").length,
+        sulit: questions.filter((qs) => qs.topicId === t.id && qs.difficulty === "sulit").length,
       };
       return { ...t, counts };
     });
 
-  return NextResponse.json({ topics });
+  return NextResponse.json({ topics: result });
 }

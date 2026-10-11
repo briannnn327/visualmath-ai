@@ -1,12 +1,15 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db/prisma";
 import {
-  db,
-  ensureSeeded,
+  createUser,
   findUserByEmail,
   getKelasById,
   getUserById,
+  listKelas,
+  listUsers,
   recordActivity,
+  updateUser,
 } from "@/lib/db/store";
 import { parseBody, type UserAdminInput, userAdminSchema } from "@/lib/schemas";
 import {
@@ -17,26 +20,26 @@ import {
   toPublicUser,
   unauthorized,
 } from "@/lib/server/api-auth";
+import { hashPassword } from "@/lib/server/password";
 import type { User, UserId } from "@/lib/types";
 import { uid } from "@/lib/utils";
 
-function withMeta(u: User) {
-  const kelas = u.kelasId ? getKelasById(u.kelasId) : undefined;
+async function withMeta(u: User) {
+  const kelas = u.kelasId ? await getKelasById(u.kelasId) : undefined;
   return { ...toPublicUser(u), kelasName: kelas?.nama, kelasKode: kelas?.kode };
 }
 
 export async function GET(request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(request);
+  const user = await apiUser(request);
   if (!user) return unauthorized();
   if (user.role !== "admin") return forbidden();
-  const list = [...db.users].sort((a, b) => a.createdAt.localeCompare(b.createdAt)).map(withMeta);
-  return NextResponse.json({ users: list });
+  const list = await listUsers();
+  const result = await Promise.all(list.map((u) => withMeta(u)));
+  return NextResponse.json({ users: result });
 }
 
 export async function POST(request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(request);
+  const user = await apiUser(request);
   if (!user) return unauthorized();
   if (user.role !== "admin") return forbidden();
 
@@ -52,42 +55,43 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     return badRequest(err instanceof Error ? err.message : "Data tidak valid");
   }
-  if (findUserByEmail(input.email)) return badRequest("Email sudah terdaftar");
+  if (await findUserByEmail(input.email)) return badRequest("Email sudah terdaftar");
   if (!input.password) return badRequest("Kata sandi wajib untuk pengguna baru");
-  if (input.kelasId && input.role === "mahasiswa" && !getKelasById(input.kelasId))
-    return badRequest("Kelas tidak ditemukan");
+  if (input.kelasId && input.role === "mahasiswa") {
+    const k = await getKelasById(input.kelasId);
+    if (!k) return badRequest("Kelas tidak ditemukan");
+  }
 
-  const created: User = {
-    id: uid("u-") as UserId,
+  const created = await createUser({
+    id: uid("u-"),
     name: input.name,
     email: input.email,
-    password: input.password,
+    password: hashPassword(input.password),
     role: input.role,
     nim: input.nim,
     prodi: input.prodi,
-    kelasId: input.role === "mahasiswa" ? (input.kelasId as User["kelasId"]) : undefined,
+    kelasId: input.role === "mahasiswa" ? (input.kelasId ?? undefined) : undefined,
     color: input.role === "dosen" ? "#006a61" : input.role === "admin" ? "#3525cd" : "#00668f",
-    createdAt: new Date().toISOString(),
-  };
-  db.users.push(created);
+  });
   if (created.kelasId) {
-    const kelas = db.kelas.find((k) => k.id === created.kelasId);
-    if (kelas && !kelas.mahasiswaIds.includes(created.id)) kelas.mahasiswaIds.push(created.id);
+    await prisma.kelas.update({
+      where: { id: created.kelasId },
+      data: { mahasiswa: { connect: { id: created.id } } },
+    });
   }
 
-  recordActivity({
+  await recordActivity({
     userId: user.id,
     actorName: user.name,
     action: "user.create",
     target: created.email,
     severity: "info",
   });
-  return NextResponse.json({ user: withMeta(created) }, { status: 201 });
+  return NextResponse.json({ user: await withMeta(created) }, { status: 201 });
 }
 
 export async function PATCH(request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(request);
+  const user = await apiUser(request);
   if (!user) return unauthorized();
   if (user.role !== "admin") return forbidden();
 
@@ -98,55 +102,69 @@ export async function PATCH(request: NextRequest) {
     return badRequest("Request body tidak valid");
   }
   const { id, ...patch } = body as UserAdminInput & { id: string };
-  const target = getUserById(id);
+  const target = await getUserById(id);
   if (!target) return notFound("Pengguna tidak ditemukan");
 
+  const all = await listUsers();
   if (
     target.role === "admin" &&
-    db.users.filter((u) => u.role === "admin").length <= 1 &&
+    all.filter((u) => u.role === "admin").length <= 1 &&
     patch.role &&
     patch.role !== "admin"
   )
     return badRequest("Minimal harus ada satu admin");
 
-  if (patch.name) target.name = patch.name;
+  const updateData: any = {};
+  if (patch.name) updateData.name = patch.name;
   if (patch.email && patch.email !== target.email) {
-    if (findUserByEmail(patch.email)) return badRequest("Email sudah terdaftar");
-    target.email = patch.email;
+    const existing = await findUserByEmail(patch.email);
+    if (existing) return badRequest("Email sudah terdaftar");
+    updateData.email = patch.email;
   }
-  if (patch.password) target.password = patch.password;
-  if (patch.nim !== undefined) target.nim = patch.nim;
-  if (patch.prodi !== undefined) target.prodi = patch.prodi;
-  if (patch.role) target.role = patch.role;
+  if (patch.password) updateData.password = hashPassword(patch.password);
+  if (patch.nim !== undefined) updateData.nim = patch.nim;
+  if (patch.prodi !== undefined) updateData.prodi = patch.prodi;
+  if (patch.role) updateData.role = patch.role;
 
+  let newKelasId: string | null | undefined;
   if (patch.kelasId !== undefined && target.role === "mahasiswa") {
-    // lepas dari kelas lama
-    for (const k of db.kelas) {
-      k.mahasiswaIds = k.mahasiswaIds.filter((uid2) => uid2 !== target.id);
-    }
-    if (patch.kelasId) {
-      const kelas = getKelasById(patch.kelasId);
-      if (!kelas) return badRequest("Kelas tidak ditemukan");
-      target.kelasId = patch.kelasId as User["kelasId"];
-      if (!kelas.mahasiswaIds.includes(target.id)) kelas.mahasiswaIds.push(target.id);
-    } else {
-      target.kelasId = undefined;
+    newKelasId = patch.kelasId ?? null;
+    updateData.kelasId = newKelasId;
+  }
+
+  const updated = await updateUser(target.id, updateData);
+  if (newKelasId !== undefined && target.role === "mahasiswa") {
+    await prisma.user.update({ where: { id: target.id }, data: { kelasId: newKelasId } });
+    const allKelas = await listKelas();
+    for (const k of allKelas) {
+      const has = k.mahasiswaIds.includes(target.id);
+      if (k.id === newKelasId && !has) {
+        await prisma.kelas.update({
+          where: { id: k.id },
+          data: { mahasiswa: { connect: { id: target.id } } },
+        });
+      }
+      if (k.id !== newKelasId && has) {
+        await prisma.kelas.update({
+          where: { id: k.id },
+          data: { mahasiswa: { disconnect: { id: target.id } } },
+        });
+      }
     }
   }
 
-  recordActivity({
+  await recordActivity({
     userId: user.id,
     actorName: user.name,
     action: "user.update",
-    target: target.email,
+    target: updated.email,
     severity: "info",
   });
-  return NextResponse.json({ user: withMeta(target) });
+  return NextResponse.json({ user: await withMeta(updated) });
 }
 
 export async function DELETE(request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(request);
+  const user = await apiUser(request);
   if (!user) return unauthorized();
   if (user.role !== "admin") return forbidden();
 
@@ -157,18 +175,16 @@ export async function DELETE(request: NextRequest) {
     return badRequest("Request body tidak valid");
   }
   const { id } = (body ?? {}) as { id?: string };
-  const target = getUserById(String(id));
+  const target = await getUserById(String(id));
   if (!target) return notFound("Pengguna tidak ditemukan");
   if (target.id === user.id) return badRequest("Tidak dapat menghapus akun sendiri");
-  if (target.role === "admin" && db.users.filter((u) => u.role === "admin").length <= 1)
+  const all = await listUsers();
+  if (target.role === "admin" && all.filter((u) => u.role === "admin").length <= 1)
     return badRequest("Tidak dapat menghapus admin terakhir");
 
-  for (const k of db.kelas) k.mahasiswaIds = k.mahasiswaIds.filter((uid2) => uid2 !== target.id);
-  db.users = db.users.filter((u) => u.id !== target.id);
-  db.progress = db.progress.filter((p) => p.userId !== target.id);
-  db.history = db.history.filter((h) => h.userId !== target.id);
+  await prisma.user.delete({ where: { id: target.id } });
 
-  recordActivity({
+  await recordActivity({
     userId: user.id,
     actorName: user.name,
     action: "user.delete",

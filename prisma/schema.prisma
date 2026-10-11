@@ -1,0 +1,195 @@
+// Prisma schema VisualMath AI
+// docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/**
+ * ---------- Enums (mengikuti src/lib/types.ts) ----------
+ */
+enum Role {
+  mahasiswa
+  dosen
+  admin
+}
+
+enum Difficulty {
+  mudah
+  sedang
+  sulit
+}
+
+enum QuestionType {
+  numeric
+  choice
+  truefalse
+}
+
+enum MaterialType {
+  materi
+  soal
+}
+
+enum ActivityKind {
+  formula
+  quiz
+  lesson
+  auth
+  graph
+  system
+}
+
+enum LogSeverity {
+  info
+  warning
+  error
+}
+
+/**
+ * ---------- Entities ----------
+ */
+model User {
+  id        String   @id
+  name      String
+  email     String   @unique
+  password  String
+  role      Role
+  nim       String?
+  prodi     String?
+  kelasId   String?
+  kelas     Kelas?   @relation("KelasMembers", fields: [kelasId], references: [id])
+  color     String
+  createdAt DateTime @default(now())
+
+  taughtClasses Kelas[]         @relation("KelasDosen")
+  progress      Progress[]
+  history       HistoryRecord[]
+  logs          ActivityLog[]
+  materials     MaterialItem[]  @relation("MaterialAuthor")
+  formulas      FormulaRecord[]
+}
+
+model Kelas {
+  id        String         @id
+  kode      String
+  nama      String
+  dosenId   String
+  dosen     User           @relation("KelasDosen", fields: [dosenId], references: [id])
+  mahasiswa User[]         @relation("KelasMembers")
+  materials MaterialItem[]
+  createdAt DateTime       @default(now())
+}
+
+model Topic {
+  id            String @id
+  slug          String @unique
+  title         String
+  subtitle      String
+  description   String
+  icon          String
+  color         String
+  formulaCount  Int
+  questionCount Int
+  order         Int
+
+  questions Question[]
+  progress  Progress[]
+  materials MaterialItem[]
+  formulas  FormulaRecord[]
+}
+
+model Question {
+  id             String       @id
+  topicId        String
+  topic          Topic        @relation(fields: [topicId], references: [id])
+  difficulty     Difficulty
+  type           QuestionType
+  prompt         String
+  latex          String?
+  options        String[]     @default([])
+  expectedAnswer String
+  explanation    String
+  hint           String?
+}
+
+model Progress {
+  userId    String
+  topicId   String
+  user      User     @relation(fields: [userId], references: [id])
+  topic     Topic    @relation(fields: [topicId], references: [id])
+  mastery   Int
+  attempts  Int
+  solved    Int
+  xp        Int
+  updatedAt DateTime @default(now())
+
+  @@id([userId, topicId])
+}
+
+model HistoryRecord {
+  id        String       @id
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  kind      ActivityKind
+  title     String
+  summary   String
+  score     Int?
+  xp        Int?
+  createdAt DateTime     @default(now())
+}
+
+model ActivityLog {
+  id        String      @id
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id])
+  actorName String
+  action    String
+  target    String
+  severity  LogSeverity
+  createdAt DateTime    @default(now())
+}
+
+model AIConfig {
+  id              String   @id
+  model           String
+  temperature     Float
+  maxTokens       Int
+  stepExplain     Boolean
+  adaptiveQuiz    Boolean
+  graphSimulation Boolean
+  systemPrompt    String
+  updatedAt       DateTime @default(now())
+}
+
+model MaterialItem {
+  id         String       @id
+  kelasId    String
+  kelas      Kelas        @relation(fields: [kelasId], references: [id])
+  topicId    String
+  topic      Topic        @relation(fields: [topicId], references: [id])
+  type       MaterialType
+  title      String
+  content    String
+  difficulty Difficulty?
+  createdBy  String
+  author     User         @relation("MaterialAuthor", fields: [createdBy], references: [id])
+  updatedAt  DateTime     @default(now())
+  embedding  Unsupported("vector(768)")?
+}
+
+model FormulaRecord {
+  id         String   @id
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  expression String
+  display    String
+  topicId    String?
+  topic      Topic?   @relation(fields: [topicId], references: [id])
+  createdAt  DateTime @default(now())
+}

@@ -9,15 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { Select } from "@/components/ui/select";
-import { useTopics } from "@/lib/hooks/queries";
+import { useScanSoal, useTopics } from "@/lib/hooks/queries";
 import type { Topic } from "@/lib/types";
 
 type Phase = "idle" | "preview" | "detecting" | "done" | "error";
 
-/** Scan foto soal: unggah/kamera → deteksi topik → arahkan ke latihan/AI. */
+/** Scan foto soal: unggah/kamera → OCR + deteksi topik → arahkan ke latihan/AI. */
 export function ScanSoalCard() {
   const router = useRouter();
   const topics = useTopics();
+  const scan = useScanSoal();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [phase, setPhase] = useState<Phase>("idle");
@@ -26,6 +27,8 @@ export function ScanSoalCard() {
   const [manualId, setManualId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [confidence, setConfidence] = useState(0);
+  const [expression, setExpression] = useState("");
+  const [note, setNote] = useState("");
 
   const finalTopic = manualId ? (topics.data?.find((t) => t.id === manualId) ?? null) : detected;
 
@@ -45,20 +48,25 @@ export function ScanSoalCard() {
     if (inputRef.current) inputRef.current.value = "";
   }
 
-  function startDetect() {
+  async function startDetect() {
+    if (!preview) return;
     setPhase("detecting");
-    window.setTimeout(() => {
-      const list = topics.data ?? [];
-      if (list.length === 0) {
-        setPhase("error");
-        setError("Daftar topik belum termuat. Coba lagi.");
-        return;
-      }
-      const pick = list[Math.floor(Math.random() * list.length)];
-      setDetected(pick);
-      setConfidence(87 + Math.floor(Math.random() * 11));
+    setError(null);
+    try {
+      const { scan: result } = await scan.mutateAsync({ image: preview });
+      const topic = result.topicId
+        ? ((topics.data ?? []).find((t) => t.id === result.topicId) ?? null)
+        : null;
+      setDetected(topic);
+      setManualId("");
+      setConfidence(result.confidence);
+      setExpression(result.analyzable ? result.expression : "");
+      setNote(result.note);
       setPhase("done");
-    }, 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memproses gambar. Coba lagi.");
+      setPhase("error");
+    }
   }
 
   function reset() {
@@ -67,6 +75,8 @@ export function ScanSoalCard() {
     setDetected(null);
     setManualId("");
     setConfidence(0);
+    setExpression("");
+    setNote("");
     setError(null);
   }
 
@@ -149,7 +159,7 @@ export function ScanSoalCard() {
                 <div>
                   <p className="text-sm font-semibold text-on-surface">Mengenali soal…</p>
                   <p className="text-xs text-on-surface-variant">
-                    Mencocokkan dengan katalog topik Kalkulus II.
+                    Membaca soal dengan AI dan mencocokkan katalog topik.
                   </p>
                 </div>
               </div>
@@ -165,7 +175,7 @@ export function ScanSoalCard() {
             </p>
           )}
 
-          {phase === "done" && detected && (
+          {phase === "done" && (
             <div className="space-y-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                 {preview && (
@@ -179,27 +189,41 @@ export function ScanSoalCard() {
                 <div className="flex-1 rounded-2xl bg-surface p-4 ring-1 ring-inset ring-outline-variant">
                   <div className="flex flex-wrap items-center gap-2">
                     <Icon name="check-circle" size={18} className="text-secondary" />
-                    {detected && (
-                      <p className="font-display text-xl font-extrabold text-on-surface">
-                        Topik Terdeteksi
-                      </p>
-                    )}
+                    <p className="font-display text-xl font-extrabold text-on-surface">
+                      {finalTopic ? "Topik Terdeteksi" : "Soal Terbaca"}
+                    </p>
                   </div>
                   <h4 className="mt-2 font-display text-lg font-bold text-on-surface">
-                    {finalTopic?.title}
+                    {finalTopic ? finalTopic.title : "Pilih topik secara manual"}
                   </h4>
-                  <p className="text-sm text-on-surface-variant">{finalTopic?.subtitle}</p>
+                  <p className="text-sm text-on-surface-variant">
+                    {finalTopic ? finalTopic.subtitle : "AI tidak yakin dengan topiknya."}
+                  </p>
+                  {expression && (
+                    <p className="mt-2 rounded-lg bg-surface-variant px-3 py-2 font-mono text-sm text-on-surface">
+                      {expression}
+                    </p>
+                  )}
+                  {note && !expression && (
+                    <p className="mt-2 text-sm text-on-surface-variant">{note}</p>
+                  )}
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <Badge
-                      variant={confidence >= 95 ? "success" : confidence >= 92 ? "warning" : "info"}
-                      className="gap-1"
-                    >
-                      <Icon name="target" size={12} />
-                      {confidence}% yakin
-                    </Badge>
-                    <span className="text-xs text-on-surface-variant">
-                      {finalTopic?.formulaCount} formula · {finalTopic?.questionCount} soal
-                    </span>
+                    {finalTopic && confidence > 0 && (
+                      <Badge
+                        variant={
+                          confidence >= 90 ? "success" : confidence >= 70 ? "warning" : "info"
+                        }
+                        className="gap-1"
+                      >
+                        <Icon name="target" size={12} />
+                        {confidence}% yakin
+                      </Badge>
+                    )}
+                    {finalTopic && (
+                      <span className="text-xs text-on-surface-variant">
+                        {finalTopic.formulaCount} formula · {finalTopic.questionCount} soal
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -238,7 +262,11 @@ export function ScanSoalCard() {
                   icon="sparkle"
                   onClick={() =>
                     router.push(
-                      finalTopic ? `/ai-explainer?topicId=${finalTopic.id}` : "/ai-explainer",
+                      expression
+                        ? `/ai-explainer?expr=${encodeURIComponent(expression)}`
+                        : finalTopic
+                          ? `/ai-explainer?topicId=${finalTopic.id}`
+                          : "/ai-explainer",
                     )
                   }
                 >

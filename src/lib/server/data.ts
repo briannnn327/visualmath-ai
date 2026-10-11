@@ -5,12 +5,17 @@
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/db/session";
 import {
-  db,
-  ensureSeeded,
   getKelasById,
-  getTopicById,
   getUserById,
-  progressOf,
+  listHistory,
+  listHistoryByUser,
+  listKelas,
+  listLogs,
+  listMaterials,
+  listProgress,
+  listQuestions,
+  listTopics,
+  listUsers,
   startOfToday,
 } from "@/lib/db/store";
 import { toPublicUser } from "@/lib/server/api-auth";
@@ -33,21 +38,19 @@ import type {
 
 export async function getCurrentSession(): Promise<SessionInfo | null> {
   const c = await cookies();
-  return getSession(c.get("vma_session")?.value) ?? null;
+  return (await getSession(c.get("vma_session")?.value)) ?? null;
 }
 
 export async function getCurrentUser(): Promise<User | null> {
-  ensureSeeded();
   const session = await getCurrentSession();
   if (!session) return null;
-  return getUserById(session.userId) ?? null;
+  return getUserById(session.userId);
 }
 
 export async function getCurrentPublicUser(): Promise<PublicUser | null> {
-  ensureSeeded();
   const session = await getCurrentSession();
   if (!session) return null;
-  const user = getUserById(session.userId);
+  const user = await getUserById(session.userId);
   return user ? toPublicUser(user) : null;
 }
 
@@ -63,9 +66,15 @@ export interface StudentDashboardLite {
 }
 
 export async function getStudentData(userId: string): Promise<StudentDashboardLite> {
-  const topics = [...db.topics].sort((a, b) => a.order - b.order);
+  const [topics, allProgress, allHistory, user] = await Promise.all([
+    listTopics(),
+    listProgress(),
+    listHistory(),
+    getUserById(userId),
+  ]);
+
   const rows: Array<{ topic: Topic; progress: Progress }> = topics.map((topic) => {
-    const existing = progressOf(userId, topic.id);
+    const existing = allProgress.find((p) => p.userId === userId && p.topicId === topic.id);
     const progress: Progress = existing ?? {
       userId: userId as UserId,
       topicId: topic.id,
@@ -79,11 +88,10 @@ export async function getStudentData(userId: string): Promise<StudentDashboardLi
   });
 
   const mine = rows.filter((r) => r.progress.attempts > 0);
-  const totalXp = db.progress.filter((p) => p.userId === userId).reduce((s, p) => s + p.xp, 0);
+  const myProgress = allProgress.filter((p) => p.userId === userId);
+  const totalXp = myProgress.reduce((s, p) => s + p.xp, 0);
   const core = mine.filter((r) => r.progress.mastery >= 70).length;
-  const solvedTotal = db.progress
-    .filter((p) => p.userId === userId)
-    .reduce((s, p) => s + p.solved, 0);
+  const solvedTotal = myProgress.reduce((s, p) => s + p.solved, 0);
   const avgMastery =
     mine.length > 0
       ? Math.round((mine.reduce((s, r) => s + r.progress.mastery, 0) / mine.length) * 10) / 10
@@ -91,7 +99,7 @@ export async function getStudentData(userId: string): Promise<StudentDashboardLi
 
   /* Streak: hari-hari berurutan dengan aktivitas, dihitung dari hari ini mundur */
   const activityDays = new Set(
-    db.history.filter((h) => h.userId === userId).map((h) => new Date(h.createdAt).toDateString()),
+    allHistory.filter((h) => h.userId === userId).map((h) => new Date(h.createdAt).toDateString()),
   );
   let streak = 0;
   const cursor = new Date();
@@ -124,14 +132,13 @@ export async function getStudentData(userId: string): Promise<StudentDashboardLi
   /* Peringkat kelas dari rata-rata mastery */
   let kelasName: string | undefined;
   let classRank: number | undefined;
-  const user = getUserById(userId);
   if (user?.kelasId) {
-    const kelas = getKelasById(user.kelasId);
+    const kelas = await getKelasById(user.kelasId);
     kelasName = kelas?.nama;
     const classmates = kelas?.mahasiswaIds ?? [];
     const avgs = classmates
       .map((cid) => {
-        const rows2 = db.progress.filter((p) => p.userId === cid && p.attempts > 0);
+        const rows2 = allProgress.filter((p) => p.userId === cid && p.attempts > 0);
         if (rows2.length === 0) return { id: cid, avg: 0 };
         return {
           id: cid,
@@ -143,7 +150,7 @@ export async function getStudentData(userId: string): Promise<StudentDashboardLi
     if (myAvg) classRank = 1 + avgs.findIndex((a) => a.id === userId);
   }
 
-  const recent = db.history
+  const recent = allHistory
     .filter((h) => h.userId === userId)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 5);
@@ -165,19 +172,24 @@ export async function getStudentData(userId: string): Promise<StudentDashboardLi
 }
 
 export async function getStudentHistory(userId: string): Promise<HistoryRecord[]> {
-  return db.history
-    .filter((h) => h.userId === userId)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return listHistoryByUser(userId);
 }
 
 /* ---------------- Dosen ---------------- */
 
 export async function getDosenStats(userId: string) {
-  const myClasses = db.kelas.filter((k) => k.dosenId === userId);
+  const [allKelas, allProgress, allMaterials, allHistory] = await Promise.all([
+    listKelas(),
+    listProgress(),
+    listMaterials(),
+    listHistory(),
+  ]);
+
+  const myClasses = allKelas.filter((k) => k.dosenId === userId);
   const studentIds = new Set(myClasses.flatMap((k) => k.mahasiswaIds));
   const students = [...studentIds];
-  const materials = db.materials.filter((m) => m.createdBy === userId);
-  const progressRows = db.progress.filter((p) => studentIds.has(p.userId));
+  const materials = allMaterials.filter((m) => m.createdBy === userId);
+  const progressRows = allProgress.filter((p) => studentIds.has(p.userId));
   const avgMastery =
     progressRows.length > 0
       ? Math.round((progressRows.reduce((s, p) => s + p.mastery, 0) / progressRows.length) * 10) /
@@ -185,7 +197,7 @@ export async function getDosenStats(userId: string) {
       : 0;
 
   const kelas: ClassWithStats[] = myClasses.map((k) => {
-    const rows = db.progress.filter((p) => k.mahasiswaIds.includes(p.userId));
+    const rows = allProgress.filter((p) => k.mahasiswaIds.includes(p.userId));
     const avg = rows.length ? rows.reduce((s, p) => s + p.mastery, 0) / rows.length : 0;
     return {
       ...k,
@@ -195,7 +207,7 @@ export async function getDosenStats(userId: string) {
     };
   });
 
-  const recent = db.history
+  const recent = allHistory
     .filter((h) => studentIds.has(h.userId))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 6);
@@ -220,17 +232,26 @@ export interface RosterRow {
   lastActive: string;
 }
 
-export function getKelasRoster(kelas: Kelas): RosterRow[] {
+export async function getKelasRoster(kelas: Kelas): Promise<RosterRow[]> {
+  const [users, allProgress, allTopics] = await Promise.all([
+    listUsers(),
+    listProgress(),
+    listTopics(),
+  ]);
+  const userById = new Map(users.map((u) => [u.id, u]));
+  const topicById = new Map(allTopics.map((t) => [t.id, t]));
+
   return kelas.mahasiswaIds
     .map((uid2) => {
-      const user = getUserById(uid2);
+      const user = userById.get(uid2);
       if (!user) return null;
-      const pRows = db.progress.filter((p) => p.userId === uid2);
-      const mapped = pRows.map((p) => {
-        const topic = getTopicById(p.topicId);
-        // biome-ignore lint/style/noNonNullAssertion: topic selalu ada pada seed data.
-        return { topic: topic!, mastery: p.mastery };
-      });
+      const pRows = allProgress.filter((p) => p.userId === uid2);
+      const mapped = pRows
+        .map((p) => {
+          const topic = topicById.get(p.topicId);
+          return topic ? { topic, mastery: p.mastery } : null;
+        })
+        .filter((m): m is { topic: Topic; mastery: number } => m !== null);
       const avg = mapped.length ? mapped.reduce((s, m) => s + m.mastery, 0) / mapped.length : 0;
       const xp = pRows.reduce((s, p) => s + p.xp, 0);
       const lastActive = pRows.length
@@ -247,20 +268,28 @@ export function getKelasRoster(kelas: Kelas): RosterRow[] {
 /* ---------------- Admin ---------------- */
 
 export async function getAdminData(): Promise<AdminDashboardData> {
+  const [users, topics, questions, kelas, logs, history] = await Promise.all([
+    listUsers(),
+    listTopics(),
+    listQuestions(),
+    listKelas(),
+    listLogs(),
+    listHistory(),
+  ]);
   const todayMs = startOfToday();
 
   const userCounts = {
-    mahasiswa: db.users.filter((u) => u.role === "mahasiswa").length,
-    dosen: db.users.filter((u) => u.role === "dosen").length,
-    admin: db.users.filter((u) => u.role === "admin").length,
+    mahasiswa: users.filter((u) => u.role === "mahasiswa").length,
+    dosen: users.filter((u) => u.role === "dosen").length,
+    admin: users.filter((u) => u.role === "admin").length,
   };
 
-  const todayLogs = db.logs.filter((l) => new Date(l.createdAt).getTime() >= todayMs);
+  const todayLogs = logs.filter((l) => new Date(l.createdAt).getTime() >= todayMs);
   const distinctUsers = new Set(todayLogs.map((l) => l.userId?.toString() ?? "sistem"));
-  const aiToday = db.logs.filter(
+  const aiToday = logs.filter(
     (l) => new Date(l.createdAt).getTime() >= todayMs && /ai\.|quiz\.|graph\./.test(l.action),
   ).length;
-  const todayHistory = db.history.filter(
+  const todayHistory = history.filter(
     (h) => h.userId === "u-m0" && new Date(h.createdAt).getTime() >= todayMs,
   );
   const avgXpToday =
@@ -271,14 +300,14 @@ export async function getAdminData(): Promise<AdminDashboardData> {
 
   const metrics: AdminMetrics = {
     userCounts,
-    topicCount: db.topics.length,
-    questionCount: db.questions.length,
-    classCount: db.kelas.length,
-    formulaCountToday: db.logs.filter(
+    topicCount: topics.length,
+    questionCount: questions.length,
+    classCount: kelas.length,
+    formulaCountToday: logs.filter(
       (l) => l.action === "ai.explain" && new Date(l.createdAt).getTime() >= todayMs,
     ).length,
     activeUsersToday: distinctUsers.size,
-    aiRequestsToday: aiToday,
+    aiRequestsToday: todayLogs.filter((l) => /ai\.|quiz\.|graph\./.test(l.action)).length,
     avgXpToday,
   };
 
@@ -289,11 +318,11 @@ export async function getAdminData(): Promise<AdminDashboardData> {
     const start = new Date(d);
     start.setHours(0, 0, 0, 0);
     const end = start.getTime() + 24 * 60 * 60 * 1000;
-    const dayLogs = db.logs.filter((l) => {
+    const dayLogs = logs.filter((l) => {
       const t = new Date(l.createdAt).getTime();
       return t >= start.getTime() && t < end;
     });
-    const dayQuizzes = db.history.filter((h) => {
+    const dayQuizzes = history.filter((h) => {
       const t = new Date(h.createdAt).getTime();
       return h.kind === "quiz" && t >= start.getTime() && t < end;
     });
@@ -307,19 +336,20 @@ export async function getAdminData(): Promise<AdminDashboardData> {
     });
   }
 
-  const logs: ActivityLog[] = [...db.logs]
+  const recentLogs: ActivityLog[] = logs
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 12);
 
-  return { metrics, trend, logs };
+  return { metrics, trend, logs: recentLogs };
 }
 
 /* ---------------- Umum ---------------- */
 
-export function allUsers(): User[] {
-  return [...db.users].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+export async function allUsers(): Promise<User[]> {
+  return listUsers();
 }
 
-export function getAllKelas(): Kelas[] {
-  return [...db.kelas].sort((a, b) => a.nama.localeCompare(b.nama));
+export async function getAllKelas(): Promise<Kelas[]> {
+  const rows = await listKelas();
+  return rows.sort((a, b) => a.nama.localeCompare(b.nama));
 }

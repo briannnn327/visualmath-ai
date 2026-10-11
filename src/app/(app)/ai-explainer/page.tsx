@@ -32,7 +32,7 @@ export default function AIExplainerPage() {
   const pushToast = useToastStore((s) => s.push);
   const searchParams = useSearchParams();
 
-  const [expression, setExpression] = useState(presets[2].value);
+  const [expression, setExpression] = useState(() => searchParams.get("expr") ?? presets[2].value);
   const [variable, setVariable] = useState("x");
   const [topicId, setTopicId] = useState(() => searchParams.get("topicId") ?? "");
   const [result, setResult] = useState<FormulaAnalysis | null>(null);
@@ -296,14 +296,42 @@ export default function AIExplainerPage() {
 
             <div className="space-y-6">
               <Card>
-                <CardHeader>
-                  <CardTitle>Penjelasan</CardTitle>
-                  <CardDescription>Deskripsi konsep dari mesin analisis.</CardDescription>
+                <CardHeader className="flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Penjelasan</CardTitle>
+                    <CardDescription>
+                      {result.explanationSource === "ai"
+                        ? "Narasi konsep dari AI (Gemini)."
+                        : "Deskripsi konsep dari mesin analisis."}
+                    </CardDescription>
+                  </div>
+                  <Badge variant={result.explanationSource === "ai" ? "primary" : "neutral"}>
+                    {result.explanationSource === "ai"
+                      ? `AI · ${result.aiModel ?? "gemini"}`
+                      : "Mesin"}
+                  </Badge>
                 </CardHeader>
-                <CardContent className="pt-5">
+                <CardContent className="space-y-3 pt-5">
                   <p className="text-sm leading-relaxed text-on-surface-variant">
                     {result.explanation}
                   </p>
+                  {result.keyPoints && result.keyPoints.length > 0 && (
+                    <ul className="space-y-1.5 rounded-2xl border border-outline-variant bg-surface p-4">
+                      {result.keyPoints.map((point, i) => (
+                        <li
+                          key={`kp${i}`}
+                          className="flex items-start gap-2 text-sm text-on-surface-variant"
+                        >
+                          <Icon
+                            name="check-circle"
+                            size={15}
+                            className="mt-0.5 shrink-0 text-primary"
+                          />
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </CardContent>
               </Card>
 

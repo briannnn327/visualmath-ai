@@ -198,6 +198,12 @@ export interface FormulaAnalysis {
   variable: string;
   points: MathPoint[];
   derivativePoints: MathPoint[];
+  /** Sumber narasi penjelasan: dari LLM ("ai") atau mesin lokal ("mesin"). */
+  explanationSource?: "ai" | "mesin";
+  /** Nama model LLM yang menghasilkan penjelasan (bila explanationSource = "ai"). */
+  aiModel?: string;
+  /** Poin-poin kunci tambahan dari LLM. */
+  keyPoints?: string[];
 }
 
 /* ---------- Latihan adaptif ---------- */

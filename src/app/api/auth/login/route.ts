@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { createSession } from "@/lib/db/session";
-import { ensureSeeded, findUserByEmail, recordActivity } from "@/lib/db/store";
+import { findUserByEmail, recordActivity } from "@/lib/db/store";
 import { loginSchema } from "@/lib/schemas";
 import { badRequest, toPublicUser } from "@/lib/server/api-auth";
+import { verifyPassword } from "@/lib/server/password";
 
 export async function POST(request: Request) {
-  ensureSeeded();
   let body: unknown;
   try {
     body = await request.json();
@@ -18,19 +18,19 @@ export async function POST(request: Request) {
     return badRequest(parsed.error.issues[0]?.message ?? "Data tidak valid");
   }
 
-  const user = findUserByEmail(parsed.data.email);
-  if (!user || user.password !== parsed.data.password) {
+  const user = await findUserByEmail(parsed.data.email);
+  if (!user || !verifyPassword(parsed.data.password, user.password)) {
     return badRequest("Email atau kata sandi salah");
   }
 
-  const { token, session } = createSession({
+  const { token, session } = await createSession({
     id: user.id,
     role: user.role,
     name: user.name,
     email: user.email,
   });
 
-  recordActivity({
+  await recordActivity({
     userId: user.id,
     actorName: user.name,
     action: "login",

@@ -21,7 +21,12 @@ import { type AIConfigInput, aiConfigSchema } from "@/lib/schemas";
 import type { AIConfig } from "@/lib/types";
 import { cn, formatDate, formatNumber } from "@/lib/utils";
 
-const MODEL_OPTIONS = ["gemini-2.5-flash", "gpt-4o-mini", "claude-haiku", "llama-3.1-8b"];
+const MODEL_OPTIONS = [
+  "gemini-3.8-flash",
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite",
+];
 
 interface FeatureDef {
   key: keyof AIConfigInput["features"];

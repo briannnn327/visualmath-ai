@@ -3,19 +3,18 @@
    ========================================================= */
 import type { NextRequest } from "next/server";
 import { getSession } from "@/lib/db/session";
-import { ensureSeeded, getUserById } from "@/lib/db/store";
+import { getUserById } from "@/lib/db/store";
 import type { PublicUser, SessionInfo, User } from "@/lib/types";
 
-export function apiSession(request: NextRequest): SessionInfo | null {
+export async function apiSession(request: NextRequest): Promise<SessionInfo | null> {
   const token = request.cookies.get("vma_session")?.value;
-  return getSession(token) ?? null;
+  return (await getSession(token)) ?? null;
 }
 
-export function apiUser(request: NextRequest): User | null {
-  ensureSeeded();
-  const session = apiSession(request);
+export async function apiUser(request: NextRequest): Promise<User | null> {
+  const session = await apiSession(request);
   if (!session) return null;
-  return getUserById(session.userId) ?? null;
+  return getUserById(session.userId);
 }
 
 export function toPublicUser(user: User): PublicUser {

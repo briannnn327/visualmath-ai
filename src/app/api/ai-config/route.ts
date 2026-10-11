@@ -1,23 +1,23 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { db, ensureSeeded, recordActivity } from "@/lib/db/store";
+import { getAIConfig, recordActivity, updateAIConfig } from "@/lib/db/store";
 import { type AIConfigInput, aiConfigSchema, parseBody } from "@/lib/schemas";
 import { apiUser, badRequest, forbidden, unauthorized } from "@/lib/server/api-auth";
 
 export async function GET(request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(request);
+  const user = await apiUser(request);
   if (!user) return unauthorized();
-  return NextResponse.json({ config: db.aiConfig });
+  const config = await getAIConfig();
+  return NextResponse.json({ config });
 }
 
 export async function PATCH(request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(request);
+  const user = await apiUser(request);
   if (!user) return unauthorized();
   if (user.role !== "admin") return forbidden();
 
-  if (!db.aiConfig) return badRequest("Konfigurasi AI belum ada");
+  const current = await getAIConfig();
+  if (!current) return badRequest("Konfigurasi AI belum ada");
 
   let body: unknown;
   try {
@@ -32,13 +32,19 @@ export async function PATCH(request: NextRequest) {
     return badRequest(err instanceof Error ? err.message : "Data tidak valid");
   }
 
-  Object.assign(db.aiConfig, input, { updatedAt: new Date().toISOString() });
-  recordActivity({
+  const config = await updateAIConfig({
+    model: input.model,
+    temperature: input.temperature,
+    maxTokens: input.maxTokens,
+    features: input.features,
+    systemPrompt: input.systemPrompt,
+  });
+  await recordActivity({
     userId: user.id,
     actorName: user.name,
     action: "ai.configure",
-    target: db.aiConfig.model,
+    target: config.model,
     severity: "info",
   });
-  return NextResponse.json({ config: db.aiConfig });
+  return NextResponse.json({ config });
 }

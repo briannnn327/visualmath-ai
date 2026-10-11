@@ -1,64 +1,63 @@
 /* =========================================================
-   Sesi autentikasi stateless (demo).
-   Token = payload(user+expiry) . HMAC-SHA256(payload).
-   Bisa diverifikasi oleh middleware/proxy & route handler
-   tanpa berbagi memori antar-runtime.
+   Sesi autentikasi stateless berbasis JWT (jose, HS256).
+   - createSession(): menandatangani token + info sesi
+   - getSession(): verifikasi token (async, dipakai proxy & route)
+   - destroySession(): stateless — cukup hapus cookie di klien
    ========================================================= */
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { jwtVerify, SignJWT } from "jose";
 import type { Role, SessionInfo, UserId } from "@/lib/types";
 
-const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 hari
-const SECRET = process.env.VMA_SESSION_SECRET || "visualmath-ai-dev-session-secret";
+const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 hari
 
-function encode(value: string): string {
-  return Buffer.from(value, "utf8").toString("base64url");
+function getSecret(): Uint8Array {
+  const secret =
+    process.env.SESSION_SECRET ||
+    process.env.VMA_SESSION_SECRET ||
+    "visualmath-ai-dev-session-secret-ganti-di-produksi";
+  return new TextEncoder().encode(secret);
 }
 
-function decode(value: string): string {
-  return Buffer.from(value, "base64url").toString("utf8");
-}
-
-function sign(payload: string): string {
-  return createHmac("sha256", SECRET).update(payload).digest("base64url");
-}
-
-export function createSession(input: { id: UserId; role: Role; name: string; email: string }): {
-  token: string;
-  session: SessionInfo;
-} {
+export async function createSession(input: {
+  id: UserId;
+  role: Role;
+  name: string;
+  email: string;
+}): Promise<{ token: string; session: SessionInfo }> {
   const session: SessionInfo = {
     userId: input.id,
     role: input.role,
     name: input.name,
     email: input.email,
-    expires: Date.now() + SESSION_TTL_MS,
+    expires: Date.now() + SESSION_TTL_SECONDS * 1000,
   };
-  const payload = encode(JSON.stringify(session));
-  const token = `${payload}.${sign(payload)}`;
+
+  const token = await new SignJWT({
+    role: input.role,
+    name: input.name,
+    email: input.email,
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(String(input.id))
+    .setIssuedAt()
+    .setExpirationTime(`${SESSION_TTL_SECONDS}s`)
+    .sign(getSecret());
+
   return { token, session };
 }
 
-export function getSession(token: string | undefined): SessionInfo | undefined {
+export async function getSession(token: string | undefined): Promise<SessionInfo | undefined> {
   if (!token) return undefined;
-  const dot = token.lastIndexOf(".");
-  if (dot <= 0) return undefined;
-  const payload = token.slice(0, dot);
-  const sig = token.slice(dot + 1);
-
-  const expected = sign(payload);
-  const sigBuf = Buffer.from(sig);
-  const expBuf = Buffer.from(expected);
-  if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) return undefined;
-
   try {
-    const data = JSON.parse(decode(payload)) as Record<string, unknown>;
-    if (typeof data.expires !== "number" || data.expires < Date.now()) return undefined;
+    const { payload } = await jwtVerify(token, getSecret(), { algorithms: ["HS256"] });
+    const sub = payload.sub;
+    if (!sub) return undefined;
+    const expires = typeof payload.exp === "number" ? payload.exp * 1000 : Date.now() + 1;
     return {
-      userId: data.userId as UserId,
-      role: data.role as Role,
-      name: String(data.name),
-      email: String(data.email),
-      expires: data.expires,
+      userId: sub as UserId,
+      role: payload.role as Role,
+      name: String(payload.name ?? ""),
+      email: String(payload.email ?? ""),
+      expires,
     };
   } catch {
     return undefined;
@@ -71,9 +70,9 @@ export function destroySession(_token?: string): void {
 }
 
 /** Untuk halaman RSC: baca sesi dari cookie header. */
-export function sessionFromHeader(
+export async function sessionFromHeader(
   cookieHeader: string | null | undefined,
-): SessionInfo | undefined {
+): Promise<SessionInfo | undefined> {
   if (!cookieHeader) return undefined;
   const match = /(?:^|;\s*)vma_session=([^;]+)/.exec(cookieHeader);
   return getSession(match?.[1]);

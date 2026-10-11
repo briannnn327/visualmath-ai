@@ -95,6 +95,26 @@ export function useFormulaHistory(enabled = true) {
   });
 }
 
+/* ---------- Scan foto soal (OCR/vision) ---------- */
+
+export interface ScanResult {
+  expression: string;
+  latex: string;
+  note: string;
+  confidence: number;
+  topicId: string | null;
+  topicSlug: string | null;
+  topicTitle: string | null;
+  model: string;
+  analyzable: boolean;
+}
+
+export function useScanSoal() {
+  return useMutation({
+    mutationFn: (input: { image: string }) => api.post<{ scan: ScanResult }>("/api/scan", input),
+  });
+}
+
 /* ---------- Latihan adaptif ---------- */
 
 export function useQuestion(topicId: string | null, difficulty: Difficulty, enabled = true) {

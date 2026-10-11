@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { createSession } from "@/lib/db/session";
-import { db, ensureSeeded, findUserByEmail, recordActivity } from "@/lib/db/store";
+import { createUser, findUserByEmail, recordActivity } from "@/lib/db/store";
 import { registerSchema } from "@/lib/schemas";
 import { badRequest, toPublicUser } from "@/lib/server/api-auth";
+import { hashPassword } from "@/lib/server/password";
 import type { User, UserId } from "@/lib/types";
 import { uid } from "@/lib/utils";
 
 export async function POST(request: Request) {
-  ensureSeeded();
   let body: unknown;
   try {
     body = await request.json();
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     return badRequest(parsed.error.issues[0]?.message ?? "Data tidak valid");
   }
 
-  if (findUserByEmail(parsed.data.email)) {
+  if (await findUserByEmail(parsed.data.email)) {
     return badRequest("Email sudah terdaftar");
   }
 
@@ -29,20 +29,18 @@ export async function POST(request: Request) {
     return badRequest("Registrasi admin tidak diizinkan dari halaman ini");
   }
 
-  const user: User = {
-    id: uid("u-") as UserId,
+  const user: User = await createUser({
+    id: uid("u-"),
     name: parsed.data.name,
     email: parsed.data.email,
-    password: parsed.data.password,
+    password: hashPassword(parsed.data.password),
     role,
     nim: parsed.data.nim,
     prodi: parsed.data.prodi,
     color: role === "dosen" ? "#006a61" : "#3525cd",
-    createdAt: new Date().toISOString(),
-  };
-  db.users.push(user);
+  });
 
-  recordActivity({
+  await recordActivity({
     userId: user.id,
     actorName: user.name,
     action: "register",
@@ -50,7 +48,7 @@ export async function POST(request: Request) {
     severity: "info",
   });
 
-  const { token, session } = createSession({
+  const { token, session } = await createSession({
     id: user.id,
     role: user.role,
     name: user.name,

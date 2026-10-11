@@ -1,36 +1,45 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { db, ensureSeeded, getKelasById, getTopicById, recordActivity } from "@/lib/db/store";
+import { materialEmbeddingText, upsertMaterialEmbedding } from "@/lib/ai/rag";
+import {
+  createMaterial,
+  deleteMaterial,
+  getKelasById,
+  getTopicById,
+  listMaterials,
+  recordActivity,
+  updateMaterial,
+} from "@/lib/db/store";
 import { type MaterialInput, materialSchema, parseBody } from "@/lib/schemas";
 import { apiUser, badRequest, forbidden, notFound, unauthorized } from "@/lib/server/api-auth";
-import type { MaterialId, MaterialItem } from "@/lib/types";
 import { uid } from "@/lib/utils";
 
-function withMeta(m: MaterialItem) {
+async function withMeta(m: any) {
+  const [topic, kelas] = await Promise.all([getTopicById(m.topicId), getKelasById(m.kelasId)]);
   return {
     ...m,
-    topicTitle: getTopicById(m.topicId)?.title ?? "",
-    kelasName: getKelasById(m.kelasId)?.nama ?? "",
+    topicTitle: topic?.title ?? "",
+    kelasName: kelas?.nama ?? "",
   };
 }
 
 export async function GET(request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(request);
+  const user = await apiUser(request);
   if (!user) return unauthorized();
   if (user.role !== "dosen" && user.role !== "admin") return forbidden();
 
   const kelasId = request.nextUrl.searchParams.get("kelasId");
-  const list = db.materials
+  const all = await listMaterials();
+  const list = all
     .filter((m) => m.createdBy === user.id || user.role === "admin")
     .filter((m) => (kelasId ? m.kelasId === kelasId : true))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  return NextResponse.json({ materials: list.map(withMeta) });
+  const result = await Promise.all(list.map(withMeta));
+  return NextResponse.json({ materials: result });
 }
 
 export async function POST(request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(request);
+  const user = await apiUser(request);
   if (!user) return unauthorized();
   if (user.role !== "dosen" && user.role !== "admin") return forbidden();
 
@@ -48,20 +57,18 @@ export async function POST(request: NextRequest) {
     return badRequest(err instanceof Error ? err.message : "Data tidak valid");
   }
 
-  const item: MaterialItem = {
-    id: uid("mt-") as MaterialId,
-    kelasId: input.kelasId as MaterialItem["kelasId"],
-    topicId: input.topicId as MaterialItem["topicId"],
+  const item = await createMaterial({
+    id: uid("mt-"),
+    kelasId: input.kelasId,
+    topicId: input.topicId,
     type: input.type,
     title: input.title,
     content: input.content,
     difficulty: input.difficulty,
     createdBy: user.id,
-    updatedAt: new Date().toISOString(),
-  };
-  db.materials.push(item);
+  });
 
-  recordActivity({
+  await recordActivity({
     userId: user.id,
     actorName: user.name,
     action: "material.create",
@@ -69,12 +76,13 @@ export async function POST(request: NextRequest) {
     severity: "info",
   });
 
-  return NextResponse.json({ material: withMeta(item) }, { status: 201 });
+  void upsertMaterialEmbedding(item.id, materialEmbeddingText(item.title, item.content));
+
+  return NextResponse.json({ material: await withMeta(item) }, { status: 201 });
 }
 
 export async function PATCH(request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(request);
+  const user = await apiUser(request);
   if (!user) return unauthorized();
   if (user.role !== "dosen" && user.role !== "admin") return forbidden();
 
@@ -85,38 +93,39 @@ export async function PATCH(request: NextRequest) {
     return badRequest("Request body tidak valid");
   }
   const { id, ...patch } = body as MaterialInput & { id: string };
-  const item = db.materials.find((m) => m.id === id);
+  const all = await listMaterials();
+  const item = all.find((m) => m.id === id);
   if (!item) return notFound("Materi tidak ditemukan");
   if (item.createdBy !== user.id && user.role !== "admin") return forbidden();
 
   const valid = materialSchema.safeParse(patch);
   if (!valid.success) return badRequest(valid.error.issues[0]?.message ?? "Data tidak valid");
-  Object.assign(item, valid.data, { updatedAt: new Date().toISOString() });
+  const updated = await updateMaterial(item.id, valid.data);
 
-  recordActivity({
+  await recordActivity({
     userId: user.id,
     actorName: user.name,
     action: "material.update",
-    target: item.title,
+    target: updated.title,
     severity: "info",
   });
-  return NextResponse.json({ material: withMeta(item) });
+  void upsertMaterialEmbedding(updated.id, materialEmbeddingText(updated.title, updated.content));
+  return NextResponse.json({ material: await withMeta(updated) });
 }
 
 export async function DELETE(request: NextRequest) {
-  ensureSeeded();
-  const user = apiUser(request);
+  const user = await apiUser(request);
   if (!user) return unauthorized();
   if (user.role !== "dosen" && user.role !== "admin") return forbidden();
 
   const { id } = (await request.json().catch(() => ({}))) as { id?: string };
   if (!id) return badRequest("id diperlukan");
-  const idx = db.materials.findIndex((m) => m.id === id);
-  if (idx < 0) return notFound("Materi tidak ditemukan");
-  const item = db.materials[idx];
+  const all = await listMaterials();
+  const item = all.find((m) => m.id === id);
+  if (!item) return notFound("Materi tidak ditemukan");
   if (item.createdBy !== user.id && user.role !== "admin") return forbidden();
-  db.materials.splice(idx, 1);
-  recordActivity({
+  await deleteMaterial(item.id);
+  await recordActivity({
     userId: user.id,
     actorName: user.name,
     action: "material.delete",
