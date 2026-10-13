@@ -11,7 +11,8 @@ import {
 } from "@/lib/db/store";
 import { analyzeExpression, ParseError } from "@/lib/math/parser";
 import { type FormulaInput, formulaInputSchema } from "@/lib/schemas";
-import { apiUser, badRequest, unauthorized } from "@/lib/server/api-auth";
+import { apiUser, badRequest, tooManyRequests, unauthorized } from "@/lib/server/api-auth";
+import { checkAiRateLimit } from "@/lib/server/rate-limit";
 import type { FormulaAnalysis, FormulaRecord } from "@/lib/types";
 import { uid } from "@/lib/utils";
 
@@ -41,6 +42,14 @@ function toAnalysis(source: string, variable?: string): FormulaAnalysis {
 export async function POST(request: NextRequest) {
   const user = await apiUser(request);
   if (!user) return unauthorized();
+
+  const quota = checkAiRateLimit("formula", user.id);
+  if (!quota.allowed) {
+    return tooManyRequests(
+      "Terlalu banyak analisis formula. Coba lagi nanti.",
+      quota.retryAfterMs / 1000,
+    );
+  }
 
   let body: unknown;
   try {

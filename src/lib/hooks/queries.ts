@@ -224,6 +224,7 @@ export interface EmbeddingStatus {
   total: number;
   embedded: number;
   missing: number;
+  chunks: number;
   aiConfigured: boolean;
 }
 

@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { materialEmbeddingText, upsertMaterialEmbedding } from "@/lib/ai/rag";
+import { reindexMaterial } from "@/lib/ai/rag";
 import {
   createMaterial,
   deleteMaterial,
@@ -77,10 +77,7 @@ export async function POST(request: NextRequest) {
     severity: "info",
   });
 
-  const embedded = await upsertMaterialEmbedding(
-    item.id,
-    materialEmbeddingText(item.title, item.content),
-  );
+  const embedded = await reindexMaterial(item.id, item.title, item.content);
 
   return NextResponse.json({ material: { ...(await withMeta(item)), embedded } }, { status: 201 });
 }
@@ -114,10 +111,7 @@ export async function PATCH(request: NextRequest) {
     severity: "info",
   });
 
-  const embedded = await upsertMaterialEmbedding(
-    updated.id,
-    materialEmbeddingText(updated.title, updated.content),
-  );
+  const embedded = await reindexMaterial(updated.id, updated.title, updated.content);
 
   return NextResponse.json({ material: { ...(await withMeta(updated)), embedded } });
 }

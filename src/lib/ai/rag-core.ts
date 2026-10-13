@@ -58,3 +58,80 @@ export function buildReference(chunks: RagChunk[]): string {
     })
     .join("\n\n");
 }
+
+export interface ChunkOptions {
+  maxChars?: number;
+  overlap?: number;
+  minChars?: number;
+}
+
+const CHUNK_DEFAULTS: Required<ChunkOptions> = { maxChars: 800, overlap: 120, minChars: 160 };
+
+function hardSplit(text: string, maxChars: number, overlap: number): string[] {
+  const parts: string[] = [];
+  const step = Math.max(1, maxChars - overlap);
+  for (let i = 0; i < text.length; i += step) {
+    parts.push(text.slice(i, i + maxChars));
+    if (i + maxChars >= text.length) break;
+  }
+  return parts;
+}
+
+/**
+ * Pecah konten materi menjadi potongan (per paragraf, dengan panjang maksimum)
+ * untuk embedding tingkat chunk. Paragraf raksasa dipotong dengan tumpang tindih.
+ */
+export function chunkText(text: string, options: ChunkOptions = {}): string[] {
+  const maxChars = options.maxChars ?? CHUNK_DEFAULTS.maxChars;
+  const overlap = options.overlap ?? CHUNK_DEFAULTS.overlap;
+  const minChars = options.minChars ?? CHUNK_DEFAULTS.minChars;
+
+  const normalized = text.replace(/\r\n/g, "\n").trim();
+  if (!normalized) return [];
+  if (normalized.length <= maxChars) return [normalized];
+
+  const paragraphs = normalized
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const chunks: string[] = [];
+  let buffer = "";
+  const flush = () => {
+    if (buffer.trim()) chunks.push(buffer.trim());
+    buffer = "";
+  };
+
+  for (const para of paragraphs) {
+    const pieces = para.length > maxChars ? hardSplit(para, maxChars, overlap) : [para];
+    for (const piece of pieces) {
+      if (!buffer) buffer = piece;
+      else if (buffer.length + 2 + piece.length <= maxChars) buffer = `${buffer}\n\n${piece}`;
+      else {
+        flush();
+        buffer = piece;
+      }
+    }
+  }
+  flush();
+
+  const merged: string[] = [];
+  for (const chunk of chunks) {
+    if (merged.length > 0 && chunk.length < minChars) {
+      merged[merged.length - 1] = `${merged[merged.length - 1]}\n\n${chunk}`;
+    } else {
+      merged.push(chunk);
+    }
+  }
+  return merged;
+}
+
+/** Simpan hanya chunk terbaik per materi (dipakai saat retrieval tingkat paragraf). */
+export function dedupeByMaterial(chunks: RagChunk[]): RagChunk[] {
+  const best = new Map<string, RagChunk>();
+  for (const chunk of chunks) {
+    const current = best.get(chunk.id);
+    if (!current || chunk.similarity > current.similarity) best.set(chunk.id, chunk);
+  }
+  return [...best.values()].sort((a, b) => b.similarity - a.similarity);
+}

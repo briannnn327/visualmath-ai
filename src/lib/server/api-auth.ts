@@ -37,3 +37,11 @@ export function badRequest(message: string): Response {
 export function notFound(message = "Data tidak ditemukan"): Response {
   return Response.json({ error: message }, { status: 404 });
 }
+
+export function tooManyRequests(message: string, retryAfterSec = 60): Response {
+  const seconds = Math.max(1, Math.ceil(retryAfterSec));
+  return Response.json(
+    { error: message },
+    { status: 429, headers: { "Retry-After": String(seconds) } },
+  );
+}

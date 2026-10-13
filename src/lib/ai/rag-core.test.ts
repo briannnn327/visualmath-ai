@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildReference,
+  chunkText,
+  dedupeByMaterial,
   filterBySimilarity,
   materialEmbeddingText,
   RAG_MIN_SIMILARITY,
@@ -63,5 +65,49 @@ describe("rag-core — helper murni", () => {
   it("memotong konten yang terlalu panjang", () => {
     const ref = buildReference([chunk({ content: "a".repeat(700) })]);
     expect(ref).toContain("…");
+  });
+});
+
+describe("rag-core — chunking materi", () => {
+  it("mengembalikan [] untuk teks kosong", () => {
+    expect(chunkText("")).toEqual([]);
+    expect(chunkText("   \n\n  ")).toEqual([]);
+  });
+
+  it("tidak memecah teks pendek dan memangkas spasi", () => {
+    expect(chunkText("  hai  ", { maxChars: 800 })).toEqual(["hai"]);
+  });
+
+  it("memecah paragraf menjadi chunk dengan batas panjang", () => {
+    const text = ["A".repeat(300), "B".repeat(300), "C".repeat(300)].join("\n\n");
+    const chunks = chunkText(text, { maxChars: 400, overlap: 50, minChars: 0 });
+    expect(chunks).toHaveLength(3);
+    expect(chunks.every((c) => c.length <= 400)).toBe(true);
+  });
+
+  it("memotong paragraf raksasa dengan tumpang tindih", () => {
+    const chunks = chunkText("x".repeat(1000), { maxChars: 300, overlap: 100, minChars: 0 });
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.every((c) => c.length <= 300)).toBe(true);
+  });
+
+  it("menggabungkan chunk yang terlalu pendek ke chunk sebelumnya", () => {
+    const text = ["A".repeat(200), "kecil", "B".repeat(200)].join("\n\n");
+    const chunks = chunkText(text, { maxChars: 250, overlap: 50, minChars: 50 });
+    expect(chunks).toHaveLength(2);
+    expect(chunks[0]).toContain("kecil");
+  });
+});
+
+describe("rag-core — dedupe per materi", () => {
+  it("menyimpan skor tertinggi per materi dan mengurutkan menurun", () => {
+    const deduped = dedupeByMaterial([
+      chunk({ id: "m1", similarity: 0.4, content: "rendah" }),
+      chunk({ id: "m1", similarity: 0.7, content: "terbaik" }),
+      chunk({ id: "m2", similarity: 0.9 }),
+    ]);
+    expect(deduped.map((c) => c.id)).toEqual(["m2", "m1"]);
+    expect(deduped.find((c) => c.id === "m1")?.similarity).toBe(0.7);
+    expect(deduped.find((c) => c.id === "m1")?.content).toBe("terbaik");
   });
 });

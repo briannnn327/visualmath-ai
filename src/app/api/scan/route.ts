@@ -4,12 +4,19 @@ import { isAIConfigured, ocrMathImage } from "@/lib/ai/gemini";
 import { getAIConfig, listTopics, recordActivity } from "@/lib/db/store";
 import { analyzeExpression, ParseError } from "@/lib/math/parser";
 import { parseBody, type ScanInput, scanInputSchema } from "@/lib/schemas";
-import { apiUser, badRequest, unauthorized } from "@/lib/server/api-auth";
+import { apiUser, badRequest, tooManyRequests, unauthorized } from "@/lib/server/api-auth";
+import { checkAiRateLimit } from "@/lib/server/rate-limit";
 
 /** Scan foto soal: OCR + deteksi topik memakai Gemini vision. */
 export async function POST(request: NextRequest) {
   const user = await apiUser(request);
   if (!user) return unauthorized();
+
+  const quota = checkAiRateLimit("scan", user.id);
+  if (!quota.allowed) {
+    return tooManyRequests("Terlalu banyak scan foto. Coba lagi nanti.", quota.retryAfterMs / 1000);
+  }
+
   if (!isAIConfigured()) {
     return badRequest("Fitur scan foto memerlukan konfigurasi AI (GOOGLE_GENERATIVE_AI_API_KEY).");
   }

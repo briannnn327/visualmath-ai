@@ -935,10 +935,10 @@ async function main() {
   await prisma.aIConfig.upsert({ where: { id: cfg.id }, update: cfg, create: cfg });
 
   /* ---------- Embedding materi (RAG) ---------- */
-  const { materialEmbeddingText, upsertMaterialEmbedding } = await import("@/lib/ai/rag");
+  const { reindexMaterial } = await import("@/lib/ai/rag");
   let embedded = 0;
   for (const m of materials) {
-    const ok = await upsertMaterialEmbedding(m.id, materialEmbeddingText(m.title, m.content));
+    const ok = await reindexMaterial(m.id, m.title, m.content);
     if (ok) embedded++;
   }
   console.log(`Seed selesai. Embedding materi: ${embedded}/${materials.length}.`);

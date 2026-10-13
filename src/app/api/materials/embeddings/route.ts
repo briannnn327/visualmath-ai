@@ -2,7 +2,14 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { backfillMaterialEmbeddings, embeddingStatus } from "@/lib/ai/rag";
 import { recordActivity } from "@/lib/db/store";
-import { apiUser, badRequest, forbidden, unauthorized } from "@/lib/server/api-auth";
+import {
+  apiUser,
+  badRequest,
+  forbidden,
+  tooManyRequests,
+  unauthorized,
+} from "@/lib/server/api-auth";
+import { checkAiRateLimit } from "@/lib/server/rate-limit";
 
 /** Status embedding materi (dosen & admin). */
 export async function GET(request: NextRequest) {
@@ -19,6 +26,14 @@ export async function POST(request: NextRequest) {
   const user = await apiUser(request);
   if (!user) return unauthorized();
   if (user.role !== "dosen" && user.role !== "admin") return forbidden();
+
+  const quota = checkAiRateLimit("embedding", user.id);
+  if (!quota.allowed) {
+    return tooManyRequests(
+      "Terlalu banyak backfill embedding. Coba lagi nanti.",
+      quota.retryAfterMs / 1000,
+    );
+  }
 
   let body: unknown = {};
   try {

@@ -17,6 +17,12 @@
 /.next/
 /out/
 
+# local editor/agent tooling
+/.agents/
+/.claude/
+/.windsurf/
+/skills-lock.json
+
 # production
 /build
 

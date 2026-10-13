@@ -2,13 +2,28 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { listQuestions } from "@/lib/db/store";
 import { exerciseHelpSchema } from "@/lib/schemas";
-import { apiUser, badRequest, notFound, unauthorized } from "@/lib/server/api-auth";
+import {
+  apiUser,
+  badRequest,
+  notFound,
+  tooManyRequests,
+  unauthorized,
+} from "@/lib/server/api-auth";
 import { helpForQuestion } from "@/lib/server/exercise-ai";
+import { checkAiRateLimit } from "@/lib/server/rate-limit";
 
 /** Petunjuk (hint) berbasis AI + materi topik, untuk soal latihan. */
 export async function POST(request: NextRequest) {
   const user = await apiUser(request);
   if (!user) return unauthorized();
+
+  const quota = checkAiRateLimit("help", user.id);
+  if (!quota.allowed) {
+    return tooManyRequests(
+      "Terlalu banyak permintaan bantuan. Coba lagi nanti.",
+      quota.retryAfterMs / 1000,
+    );
+  }
 
   let body: unknown;
   try {

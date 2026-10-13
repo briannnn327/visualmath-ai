@@ -181,6 +181,19 @@ model MaterialItem {
   author     User         @relation("MaterialAuthor", fields: [createdBy], references: [id])
   updatedAt  DateTime     @default(now())
   embedding  Unsupported("vector(768)")?
+  chunks     MaterialChunk[]
+}
+
+model MaterialChunk {
+  id         String       @id
+  materialId String
+  material   MaterialItem @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  ord        Int
+  content    String
+  createdAt  DateTime     @default(now())
+  embedding  Unsupported("vector(768)")?
+
+  @@index([materialId])
 }
 
 model FormulaRecord {

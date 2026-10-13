@@ -3,13 +3,15 @@
 /* eslint-disable @next/next/no-img-element -- pratinjau blob/data-URL; next/image tidak mendukung blob dinamis */
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useScanSoal, useTopics } from "@/lib/hooks/queries";
+import { analyzeExpression, ParseError } from "@/lib/math/parser";
 import type { Topic } from "@/lib/types";
 
 type Phase = "idle" | "preview" | "detecting" | "done" | "error";
@@ -25,10 +27,24 @@ export function ScanSoalCard() {
   const [preview, setPreview] = useState<string | null>(null);
   const [detected, setDetected] = useState<Topic | null>(null);
   const [manualId, setManualId] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [confidence, setConfidence] = useState(0);
   const [expression, setExpression] = useState("");
   const [note, setNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const expressionCheck = useMemo(() => {
+    const value = expression.trim();
+    if (!value) return { ok: false, message: "Belum ada ekspresi terbaca." };
+    try {
+      analyzeExpression(value, "x");
+      return { ok: true, message: "" };
+    } catch (err) {
+      return {
+        ok: false,
+        message: err instanceof ParseError ? err.message : "Ekspresi tidak dikenali.",
+      };
+    }
+  }, [expression]);
 
   const finalTopic = manualId ? (topics.data?.find((t) => t.id === manualId) ?? null) : detected;
 
@@ -60,7 +76,7 @@ export function ScanSoalCard() {
       setDetected(topic);
       setManualId("");
       setConfidence(result.confidence);
-      setExpression(result.analyzable ? result.expression : "");
+      setExpression(result.expression || "");
       setNote(result.note);
       setPhase("done");
     } catch (err) {
@@ -199,14 +215,28 @@ export function ScanSoalCard() {
                   <p className="text-sm text-on-surface-variant">
                     {finalTopic ? finalTopic.subtitle : "AI tidak yakin dengan topiknya."}
                   </p>
-                  {expression && (
-                    <p className="mt-2 rounded-lg bg-surface-variant px-3 py-2 font-mono text-sm text-on-surface">
-                      {expression}
-                    </p>
-                  )}
-                  {note && !expression && (
-                    <p className="mt-2 text-sm text-on-surface-variant">{note}</p>
-                  )}
+                  {note && <p className="mt-2 text-sm text-on-surface-variant">{note}</p>}
+                  <label htmlFor="ocr-expr" className="mt-3 block">
+                    <span className="mb-1 block text-sm font-semibold text-on-surface">
+                      Ekspresi terbaca (bisa dikoreksi manual)
+                    </span>
+                    <Input
+                      id="ocr-expr"
+                      value={expression}
+                      onChange={(e) => setExpression(e.target.value)}
+                      placeholder="mis. 3*x^2 + 2*x - 1"
+                      className="math-mono"
+                      spellCheck={false}
+                    />
+                  </label>
+                  <p
+                    role="status"
+                    className={`mt-1 text-xs ${expressionCheck.ok ? "text-secondary" : "text-on-surface-variant"}`}
+                  >
+                    {expressionCheck.ok
+                      ? "Ekspresi valid dan siap dianalisis."
+                      : `${expressionCheck.message} Gunakan * untuk perkalian, mis. 3*x^2.`}
+                  </p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     {finalTopic && confidence > 0 && (
                       <Badge
@@ -260,10 +290,16 @@ export function ScanSoalCard() {
                 <Button
                   variant="secondary"
                   icon="sparkle"
+                  disabled={!expressionCheck.ok}
+                  title={
+                    expressionCheck.ok
+                      ? undefined
+                      : "Perbaiki ekspresi terlebih dahulu agar bisa dianalisis"
+                  }
                   onClick={() =>
                     router.push(
-                      expression
-                        ? `/ai-explainer?expr=${encodeURIComponent(expression)}`
+                      expressionCheck.ok
+                        ? `/ai-explainer?expr=${encodeURIComponent(expression.trim())}`
                         : finalTopic
                           ? `/ai-explainer?topicId=${finalTopic.id}`
                           : "/ai-explainer",

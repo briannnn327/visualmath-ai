@@ -203,7 +203,9 @@ export default function DosenMateriPage() {
               {embedding.isPending
                 ? "Memuat status…"
                 : embedding.data
-                  ? `${embedding.data.embedded}/${embedding.data.total} materi siap untuk pencarian AI (RAG)`
+                  ? `${embedding.data.embedded}/${embedding.data.total} materi siap untuk pencarian AI (RAG)${
+                      embedding.data.chunks > 0 ? ` · ${embedding.data.chunks} potongan` : ""
+                    }`
                   : "Status embedding tidak tersedia"}
             </p>
           </div>
