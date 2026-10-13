@@ -78,7 +78,7 @@ npm run test:coverage # Vitest + coverage lcov
 npm run build         # Next.js build
 ```
 
-Pipeline CI/CD: `.github/workflows/ci.yml` (lint → Biome → typecheck → build → SonarQube Cloud scan).
+Pipeline CI/CD: `.github/workflows/ci.yml` (lint → Biome → typecheck → Vitest + coverage → build; laporan SonarQube non-blocking).
 Quality gate SonarQube: `sonar-project.properties`.
 
 ## Struktur singkat
