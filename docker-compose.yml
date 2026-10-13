@@ -11,10 +11,18 @@ services:
       POSTGRES_PASSWORD: visualmath
       POSTGRES_DB: visualmath
       PGDATA: /var/lib/postgresql/data
+      # Collation deterministik (byte-wise) → menghindari bug FK/perbandingan teks
+      # setelah container di-recreate dengan libc berbeda. Hanya berlaku untuk volume BARU.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     ports:
       - "5432:5432"
     volumes:
       - visualmath_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U visualmath -d visualmath"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   visualmath_pgdata:

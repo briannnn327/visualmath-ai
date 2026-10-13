@@ -62,10 +62,10 @@ Akun demo (seed): mahasiswa `maria@students.uns.ac.id/maria123`, dosen `dosen@vi
 `docker-compose.yml` memakai volume **external** `visualmath_pgdata`. Bila container di-recreate dengan image/libc berbeda, collation `en_US.utf8` dapat tidak sinkron sehingga perbandingan teks / FK gagal walau data benar. Perbaikan cepat:
 
 ```bash
-docker exec visualmath-db psql -U visualmath -d visualmath -c "REINDEX DATABASE visualmath"
+npm run db:reindex   # = docker exec visualmath-db psql -U visualmath -d visualmath -c "REINDEX DATABASE visualmath"
 ```
 
-Untuk jangka panjang, buat volume dengan collation deterministik (mis. ICU atau `C`).
+Untuk jangka panjang, volume baru dibuat dengan `--locale=C` (lihat `docker-compose.yml`) agar deterministik.
 
 ## Kualitas & CI
 
