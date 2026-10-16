@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { explainAnalysis } from "@/lib/ai/gemini";
+import { explainAnalysis } from "@/lib/ai/llm";
 import { buildReference, searchMaterials, toCitations } from "@/lib/ai/rag";
 import {
   addHistory,
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
       }
     } catch (err) {
       console.warn(
-        "[ai] Penjelasan Gemini gagal; memakai narasi mesin lokal:",
+        "[ai] Penjelasan LLM gagal; memakai narasi mesin lokal:",
         err instanceof Error ? err.message : err,
       );
     }

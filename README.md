@@ -22,7 +22,7 @@ Dibangun sebagai **Proyek Akhir Praktikum Pemrograman Front-End** — D3 Teknik 
 - **State:** Zustand 5 (client UI state), TanStack Query v5 (server state)
 - **Data/type:** TypeScript strict + **Zod 4** runtime validation, REST via route handlers (BFF)
 - **Database:** PostgreSQL 17 + **pgvector** (index HNSW) via **Prisma 7** (`@prisma/adapter-pg`)
-- **AI:** **Google Gemini** (`@google/genai`) — explainer langkah, OCR foto soal, embedding 768-dim untuk RAG. Mesin matematika tetap deterministik (`src/lib/math/parser.ts`); bila AI tidak aktif/gagal, narasi memakai hasil parser (degradasi aman).
+- **AI:** multi-provider — **Google Gemini** (`@google/genai`) untuk OCR foto soal + embedding 768-dim (RAG) dan teks, plus **Groq** (OpenAI-compatible) sebagai provider teks alternatif (explainer langkah, hint, pembahasan). Provider & model dipilih dari panel Admin (`/admin/konfigurasi`). Mesin matematika tetap deterministik (`src/lib/math/parser.ts`); bila AI tidak aktif/gagal, narasi memakai hasil parser (degradasi aman).
 - **Testing:** Vitest + `@vitest/coverage-v8`
 - **Toolchain:** Vite/Rolldown demo (Modul 8), Biome, ESLint (eslint-config-next)
 - **Visualisasi:** SVG interaktif + Recharts
@@ -39,7 +39,7 @@ docker compose up -d
 npx prisma migrate deploy --config prisma7.config.ts
 
 # 2) Environment
-cp .env.example .env.local   # isi DATABASE_URL, SESSION_SECRET, GOOGLE_GENERATIVE_AI_API_KEY
+cp .env.example .env.local   # isi DATABASE_URL, SESSION_SECRET, GOOGLE_GENERATIVE_AI_API_KEY (+ GROQ_API_KEY bila pakai Groq)
 
 # 3) Seed data demo (lalu opsional: hitung embedding materi)
 npx prisma db seed --config prisma7.config.ts
@@ -52,6 +52,7 @@ Akun demo (seed): mahasiswa `maria@students.uns.ac.id/maria123`, dosen `dosen@vi
 
 ### AI & RAG
 
+- **Provider teks**: dipilih di panel Admin (`/admin/konfigurasi`) — **Gemini** atau **Groq**. OCR (`/scan`) & embedding RAG **tetap Gemini**. Bila kolom `provider` belum diisi, dipakai env `AI_TEXT_PROVIDER` (default `gemini`).
 - **Rate limit** per pengguna untuk endpoint AI (`formula` 30/jam, `scan` 15/jam, `help` 40/jam, `embedding` 10/jam); respons `429` dengan header `Retry-After`.
 - **OCR** (`/scan`): hasil dibaca AI, lalu ekspresi **dapat dikoreksi manual** dan divalidasi sebelum dikirim ke AI Explainer (wajib `*` untuk perkalian, mis. `3*x^2`).
 - **RAG**: materi di-embed per dokumen **dan per-chunk paragraf** (`MaterialChunk`, helper `chunkText`). Pencarian memakai chunk bila tersedia, dengan fallback ke vektor dokumen.
@@ -86,7 +87,7 @@ Quality gate SonarQube: `sonar-project.properties`.
 ```
 src/app/          App Router: (app) mahasiswa, dosen/, admin/, api/ (route handlers)
 src/components/   UI primitif (cva) + fitur (math-plot, scan-soal, layout)
-src/lib/          store/ (Zustand), hooks/ (TanStack Query), services/ (REST), db/ (Prisma + store), ai/ (Gemini + RAG), math/ (parser)
+src/lib/          store/ (Zustand), hooks/ (TanStack Query), services/ (REST), db/ (Prisma + store), ai/ (Gemini + Groq + RAG), math/ (parser)
 src/proxy.ts      Middleware proteksi rute & peran
 ```
 
@@ -98,7 +99,7 @@ src/proxy.ts      Middleware proteksi rute & peran
 cd visualmath-ai
 vercel --prod
 ```
-3. Env production: `DATABASE_URL` (Postgres + pgvector), `SESSION_SECRET`, dan `GOOGLE_GENERATIVE_AI_API_KEY` (fitur AI). Bila secret kosong, dipakai default dev secret (cukup untuk demo).
+3. Env production: `DATABASE_URL` (Postgres + pgvector), `SESSION_SECRET`, `GOOGLE_GENERATIVE_AI_API_KEY` (OCR/embedding) dan opsional `GROQ_API_KEY` (provider teks). Bila secret kosong, dipakai default dev secret (cukup untuk demo).
 4. Verifikasi live: `https://visualmath-ai-phi.vercel.app`
 
 ## Kontribusi

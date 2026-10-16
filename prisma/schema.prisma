@@ -156,9 +156,10 @@ model ActivityLog {
 }
 
 model AIConfig {
-  id              String   @id
-  model           String
-  temperature     Float
+  id          String   @id
+  provider    String   @default("gemini")
+  model       String
+  temperature Float
   maxTokens       Int
   stepExplain     Boolean
   adaptiveQuiz    Boolean

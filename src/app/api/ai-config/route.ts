@@ -33,6 +33,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const config = await updateAIConfig({
+    provider: input.provider,
     model: input.model,
     temperature: input.temperature,
     maxTokens: input.maxTokens,

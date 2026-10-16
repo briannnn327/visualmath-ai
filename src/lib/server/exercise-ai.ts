@@ -3,7 +3,7 @@
    ("explain") yang diperkaya konteks RAG materi kelas.
    Selalu punya fallback deterministik dari bank soal.
    ========================================================= */
-import { exerciseHelp } from "@/lib/ai/gemini";
+import { exerciseHelp } from "@/lib/ai/llm";
 import { buildReference, type RagCitation, searchMaterials, toCitations } from "@/lib/ai/rag";
 import { getAIConfig } from "@/lib/db/store";
 import type { Question } from "@/lib/types";

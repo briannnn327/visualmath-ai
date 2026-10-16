@@ -124,8 +124,12 @@ export interface ActivityLog {
   createdAt: string;
 }
 
+/** Mesin bahasa (LLM teks) yang dipakai untuk explainer & bantuan latihan. */
+export type AIProvider = "gemini" | "groq";
+
 export interface AIConfig {
   id: ConfigId;
+  provider: AIProvider;
   model: string;
   temperature: number;
   maxTokens: number;

@@ -132,6 +132,7 @@ export const profileSchema = z.object({
 export type ProfileInput = z.infer<typeof profileSchema>;
 
 export const aiConfigSchema = z.object({
+  provider: z.enum(["gemini", "groq"]),
   model: z.string().trim().min(1).max(60),
   temperature: z.number().min(0).max(2),
   maxTokens: z.number().int().min(100).max(8192),

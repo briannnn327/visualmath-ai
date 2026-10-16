@@ -185,6 +185,7 @@ export function mapLog(l: {
 
 export function mapAIConfig(c: {
   id: string;
+  provider: string;
   model: string;
   temperature: number;
   maxTokens: number;
@@ -196,6 +197,7 @@ export function mapAIConfig(c: {
 }): AIConfig {
   return {
     id: c.id as AIConfig["id"],
+    provider: c.provider === "groq" ? "groq" : "gemini",
     model: c.model,
     temperature: c.temperature,
     maxTokens: c.maxTokens,

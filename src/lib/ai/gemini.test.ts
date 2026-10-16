@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { exerciseHelp, isAIConfigured } from "@/lib/ai/gemini";
+import { geminiExerciseHelp, isAIConfigured } from "@/lib/ai/gemini";
 
 const KEY = "GOOGLE_GENERATIVE_AI_API_KEY";
 const ALT = "GEMINI_API_KEY";
@@ -36,8 +36,8 @@ describe("gemini — konfigurasi & fallback", () => {
     expect(isAIConfigured()).toBe(true);
   });
 
-  it("exerciseHelp mengembalikan null tanpa API key (tanpa panggilan jaringan)", async () => {
-    const result = await exerciseHelp(
+  it("geminiExerciseHelp mengembalikan null tanpa API key (tanpa panggilan jaringan)", async () => {
+    const result = await geminiExerciseHelp(
       {
         mode: "hint",
         prompt: "Turunkan f(x) = x^2",

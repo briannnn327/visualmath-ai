@@ -16,17 +16,11 @@ import { Field } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { useToastStore } from "@/components/ui/toast";
+import { AI_MODELS, AI_PROVIDER_LABELS, AI_PROVIDERS, defaultModelFor } from "@/lib/ai/models";
 import { useAIConfig, useUpdateAIConfig } from "@/lib/hooks/queries";
 import { type AIConfigInput, aiConfigSchema } from "@/lib/schemas";
 import type { AIConfig } from "@/lib/types";
 import { cn, formatDate, formatNumber } from "@/lib/utils";
-
-const MODEL_OPTIONS = [
-  "gemini-3.8-flash",
-  "gemini-3.5-flash",
-  "gemini-3.5-flash-lite",
-  "gemini-3.1-flash-lite",
-];
 
 interface FeatureDef {
   key: keyof AIConfigInput["features"];
@@ -58,6 +52,7 @@ const FEATURES: FeatureDef[] = [
 
 function toInput(config: AIConfig): AIConfigInput {
   return {
+    provider: config.provider,
     model: config.model,
     temperature: config.temperature,
     maxTokens: config.maxTokens,
@@ -79,10 +74,9 @@ export default function AdminKonfigurasiPage() {
     if (form) setDraft(updater(form));
   }
 
+  const providerModels = AI_MODELS[form?.provider ?? "gemini"];
   const modelOptions =
-    config && !MODEL_OPTIONS.includes(config.model)
-      ? [config.model, ...MODEL_OPTIONS]
-      : MODEL_OPTIONS;
+    form && !providerModels.includes(form.model) ? [form.model, ...providerModels] : providerModels;
 
   async function handleSave(e: FormEvent) {
     e.preventDefault();
@@ -111,8 +105,8 @@ export default function AdminKonfigurasiPage() {
             Konfigurasi Mesin Analisis
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-on-surface-variant">
-            Atur parameter mesin analisis matematika VisualMath. Mesin bekerja berbasis aturan
-            (rule-based) dan deterministik — tidak memanggil model bahasa eksternal.
+            Atur mesin bahasa (LLM) yang menyusun narasi &amp; pembahasan VisualMath. Perhitungan
+            matematika tetap deterministik di mesin lokal; LLM hanya menjelaskannya.
           </p>
         </div>
         {config && (
@@ -152,16 +146,39 @@ export default function AdminKonfigurasiPage() {
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Model &amp; Parameter</CardTitle>
+                <CardTitle>Mesin Bahasa &amp; Parameter</CardTitle>
                 <CardDescription>
-                  Profil analisis dan ambang keluaran mesin penalaran.
+                  Provider, model, dan ambang keluaran untuk narasi serta pembahasan.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5 pt-5">
                 <Field
-                  label="Model / Profil Analisis"
-                  hint="Pilih profil yang tersedia, atau gunakan kustom bila diatur manual."
+                  label="Mesin Bahasa (LLM)"
+                  hint="Groq untuk teks (kuota gratis lebih lega); Gemini juga menangani OCR & embedding."
                 >
+                  <Select
+                    value={form.provider}
+                    onChange={(e) =>
+                      updateForm((f) => {
+                        const provider = e.target.value as AIConfigInput["provider"];
+                        const keep = AI_MODELS[provider].includes(f.model);
+                        return {
+                          ...f,
+                          provider,
+                          model: keep ? f.model : defaultModelFor(provider),
+                        };
+                      })
+                    }
+                  >
+                    {AI_PROVIDERS.map((p) => (
+                      <option key={p} value={p}>
+                        {AI_PROVIDER_LABELS[p]}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+
+                <Field label="Model" hint="Pilih model yang tersedia untuk provider terpilih.">
                   <Select
                     value={form.model}
                     onChange={(e) => updateForm((f) => ({ ...f, model: e.target.value }))}

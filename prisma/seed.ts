@@ -923,6 +923,7 @@ async function main() {
   /* ---------- Konfigurasi AI ---------- */
   const cfg = {
     id: "cfg-1",
+    provider: "gemini",
     model: "gemini-3.8-flash",
     temperature: 0.3,
     maxTokens: 2048,

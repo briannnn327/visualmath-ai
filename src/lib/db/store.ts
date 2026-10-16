@@ -354,6 +354,7 @@ export async function getAIConfig(): Promise<AIConfig | null> {
 }
 
 export async function updateAIConfig(data: {
+  provider: string;
   model: string;
   temperature: number;
   maxTokens: number;
@@ -365,6 +366,7 @@ export async function updateAIConfig(data: {
   const row = await prisma.aIConfig.update({
     where: { id: current.id },
     data: {
+      provider: data.provider,
       model: data.model,
       temperature: data.temperature,
       maxTokens: data.maxTokens,
