@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   const user = await apiUser(request);
   if (!user) return unauthorized();
 
-  const quota = checkAiRateLimit("scan", user.id);
+  const quota = await checkAiRateLimit("scan", user.id);
   if (!quota.allowed) {
     return tooManyRequests("Terlalu banyak scan foto. Coba lagi nanti.", quota.retryAfterMs / 1000);
   }

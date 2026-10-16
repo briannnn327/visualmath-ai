@@ -202,6 +202,8 @@ export interface FormulaAnalysis {
   variable: string;
   points: MathPoint[];
   derivativePoints: MathPoint[];
+  /** Apakah data visualisasi grafik disertakan (mengikuti fitur graphSimulation admin). */
+  graphEnabled?: boolean;
   /** Sumber narasi penjelasan: dari LLM ("ai") atau mesin lokal ("mesin"). */
   explanationSource?: "ai" | "mesin";
   /** Nama model LLM yang menghasilkan penjelasan (bila explanationSource = "ai"). */

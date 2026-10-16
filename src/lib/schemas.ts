@@ -11,9 +11,17 @@ export const materialTypeSchema = z.enum(["materi", "soal"]);
 
 const emailSchema = z.email("Format email tidak valid");
 
+/** Panjang minimal kata sandi (dipakai skema & pesan UI). */
+export const PASSWORD_MIN_LENGTH = 8;
+
+const passwordField = z
+  .string("Kata sandi wajib diisi")
+  .min(PASSWORD_MIN_LENGTH, `Kata sandi minimal ${PASSWORD_MIN_LENGTH} karakter`)
+  .max(128, "Kata sandi maksimal 128 karakter");
+
 export const loginSchema = z.object({
   email: emailSchema,
-  password: z.string("Kata sandi wajib diisi").min(4, "Kata sandi minimal 4 karakter").max(128),
+  password: z.string("Kata sandi wajib diisi").min(1, "Kata sandi wajib diisi").max(128),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
@@ -22,7 +30,7 @@ export const registerSchema = z
   .object({
     name: z.string().trim().min(3, "Nama minimal 3 karakter").max(80, "Nama maksimal 80 karakter"),
     email: emailSchema,
-    password: z.string().min(4, "Kata sandi minimal 4 karakter").max(128),
+    password: passwordField,
     confirmPassword: z.string(),
     role: roleSchema.default("mahasiswa"),
     nim: z.string().trim().max(20).optional(),
@@ -39,6 +47,30 @@ export const registerSchema = z
   });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
+
+export const forgotPasswordSchema = z.object({
+  email: emailSchema,
+});
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().trim().min(16, "Token reset tidak valid"),
+    password: passwordField,
+    confirmPassword: z.string(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.password !== data.confirmPassword) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["confirmPassword"],
+        message: "Konfirmasi kata sandi tidak cocok",
+      });
+    }
+  });
+
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 /** Ekspresi matematika: hanya huruf, angka, spasi, operator & fungsi. */
 const expressionSchema = z
@@ -114,7 +146,7 @@ export const userAdminSchema = z.object({
   name: z.string().trim().min(3).max(80),
   email: emailSchema,
   role: roleSchema,
-  password: z.string().min(4).max(128).optional(),
+  password: z.string().min(PASSWORD_MIN_LENGTH).max(128).optional(),
   nim: z.string().trim().max(20).optional(),
   prodi: z.string().trim().max(80).optional(),
   kelasId: z.string().optional().nullable(),
@@ -126,7 +158,7 @@ export const profileSchema = z.object({
   name: z.string().trim().min(3).max(80),
   nim: z.string().trim().max(20).optional(),
   prodi: z.string().trim().max(80).optional(),
-  password: z.string().min(4).max(128).optional(),
+  password: z.string().min(PASSWORD_MIN_LENGTH).max(128).optional(),
 });
 
 export type ProfileInput = z.infer<typeof profileSchema>;

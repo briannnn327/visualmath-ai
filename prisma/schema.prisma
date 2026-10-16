@@ -73,6 +73,7 @@ model User {
   logs          ActivityLog[]
   materials     MaterialItem[]  @relation("MaterialAuthor")
   formulas      FormulaRecord[]
+  passwordResets PasswordResetToken[]
 }
 
 model Kelas {
@@ -206,4 +207,26 @@ model FormulaRecord {
   topicId    String?
   topic      Topic?   @relation(fields: [topicId], references: [id])
   createdAt  DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id        String    @id
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+/** Log hit untuk rate limiter sliding-window lintas-instance. */
+model RateLimitHit {
+  id        String   @id
+  bucket    String
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([bucket, key, createdAt])
 }

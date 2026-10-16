@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   const user = await apiUser(request);
   if (!user) return unauthorized();
 
-  const quota = checkAiRateLimit("help", user.id);
+  const quota = await checkAiRateLimit("help", user.id);
   if (!quota.allowed) {
     return tooManyRequests(
       "Terlalu banyak permintaan bantuan. Coba lagi nanti.",

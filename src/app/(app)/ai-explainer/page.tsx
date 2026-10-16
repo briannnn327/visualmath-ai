@@ -172,17 +172,31 @@ export default function AIExplainerPage() {
                 <Badge variant="primary">Interaktif</Badge>
               </CardHeader>
               <CardContent className="pt-5">
-                <MathPlot
-                  segments={result.segments}
-                  derivativeSegments={result.derivativeSegments}
-                  points={result.points}
-                  derivativePoints={result.derivativePoints}
-                  roots={result.roots}
-                  extrema={result.extrema}
-                  expressionLabel={`f(${result.variable}) = ${result.pretty}`}
-                  showDerivative
-                  height={380}
-                />
+                {result.graphEnabled === false ? (
+                  <div className="flex flex-col items-center gap-2 py-8 text-center">
+                    <span className="grid h-12 w-12 place-items-center rounded-2xl bg-surface-container-high text-on-surface-variant">
+                      <Icon name="warning" size={22} />
+                    </span>
+                    <p className="text-sm font-semibold text-on-surface">
+                      Simulasi grafik dinonaktifkan admin
+                    </p>
+                    <p className="max-w-sm text-xs text-on-surface-variant">
+                      Turunan, akar, dan titik ekstrem tetap tersedia pada ringkasan di samping.
+                    </p>
+                  </div>
+                ) : (
+                  <MathPlot
+                    segments={result.segments}
+                    derivativeSegments={result.derivativeSegments}
+                    points={result.points}
+                    derivativePoints={result.derivativePoints}
+                    roots={result.roots}
+                    extrema={result.extrema}
+                    expressionLabel={`f(${result.variable}) = ${result.pretty}`}
+                    showDerivative
+                    height={380}
+                  />
+                )}
               </CardContent>
             </Card>
 

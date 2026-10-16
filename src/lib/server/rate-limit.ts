@@ -1,8 +1,10 @@
 /* =========================================================
-   Rate limiter sliding-window in-memory (per proses server).
-   Dipakai untuk membatasi pemakaian endpoint AI agar kuota LLM
-   tidak cepat habis. Bukan lintas-instance; cukup untuk deploy
-   satu proses (dev/uji). Ganti store bila butuh multi-instance.
+   Rate limiter sliding-window untuk endpoint AI.
+
+   Store default: PostgreSQL (tabel "RateLimitHit") sehingga kuota
+   dihitung bersama lintas-instance (cocok untuk Vercel/serverless).
+   Bila DB sedang bermasalah, otomatis jatuh ke store in-memory
+   (per-proses) agar endpoint AI tidak ikut gagal total.
    ========================================================= */
 
 export interface RateLimitRule {
@@ -62,6 +64,99 @@ export class SlidingWindowLimiter {
   }
 }
 
+/* ---------- Store yang dapat ditukar (DB / in-memory) ---------- */
+
+export interface RateLimitStore {
+  hit(bucket: AiBucket, key: string, rule: RateLimitRule, now: number): Promise<RateLimitResult>;
+}
+
+/** Klien minimal Prisma yang dibutuhkan (memudahkan pengujian tanpa DB). */
+export interface RateLimitDb {
+  $executeRawUnsafe(query: string, ...values: unknown[]): Promise<number>;
+  $queryRawUnsafe<T = unknown>(query: string, ...values: unknown[]): Promise<T>;
+}
+
+/** Store in-memory (per-proses) — dipakai sebagai fallback. */
+export function createMemoryStore(): RateLimitStore {
+  const limiters = new Map<AiBucket, SlidingWindowLimiter>();
+  return {
+    async hit(bucket, key, rule, now) {
+      let limiter = limiters.get(bucket);
+      if (!limiter) {
+        limiter = new SlidingWindowLimiter(rule);
+        limiters.set(bucket, limiter);
+      }
+      return limiter.check(key, now);
+    },
+  };
+}
+
+/**
+ * Store berbasis PostgreSQL. Menyimpan tiap hit sebagai baris, lalu menghitung
+ * jumlah hit dalam jendela berjalan (sliding window log).
+ */
+export function createPostgresStore(db: RateLimitDb): RateLimitStore {
+  return {
+    async hit(bucket, key, rule, now) {
+      const cutoff = new Date(now - rule.windowMs);
+
+      await db.$executeRawUnsafe(
+        'DELETE FROM "RateLimitHit" WHERE bucket = $1 AND "key" = $2 AND "createdAt" <= $3',
+        bucket,
+        key,
+        cutoff,
+      );
+
+      const rows = await db.$queryRawUnsafe<Array<{ count: number | bigint; oldest: unknown }>>(
+        'SELECT COUNT(*)::int AS count, MIN("createdAt") AS oldest FROM "RateLimitHit" WHERE bucket = $1 AND "key" = $2',
+        bucket,
+        key,
+      );
+
+      const row = rows[0];
+      const count = Number(row?.count ?? 0);
+
+      if (count >= rule.limit) {
+        const oldest = row?.oldest ? new Date(row.oldest as string | number | Date) : new Date(now);
+        const oldestMs = Number.isFinite(oldest.getTime()) ? oldest.getTime() : now;
+        return {
+          allowed: false,
+          remaining: 0,
+          retryAfterMs: Math.max(0, oldestMs + rule.windowMs - now),
+        };
+      }
+
+      await db.$executeRawUnsafe(
+        'INSERT INTO "RateLimitHit" (id, bucket, "key", "createdAt") VALUES ($1, $2, $3, $4)',
+        `rl-${now}-${Math.random().toString(36).slice(2, 10)}`,
+        bucket,
+        key,
+        new Date(now),
+      );
+
+      return { allowed: true, remaining: rule.limit - count - 1, retryAfterMs: 0 };
+    },
+  };
+}
+
+/** Store in-memory bersama (fallback); dipertahankan agar state mudah dibersihkan saat uji. */
+let memoryStore = createMemoryStore();
+
+/** Store aktif — default PostgreSQL. Dapat diganti lewat setRateLimitStore (pengujian). */
+let activeStore: RateLimitStore | null = null;
+
+async function getStore(): Promise<RateLimitStore> {
+  if (activeStore) return activeStore;
+  const { prisma } = await import("@/lib/db/prisma");
+  activeStore = createPostgresStore(prisma as unknown as RateLimitDb);
+  return activeStore;
+}
+
+/** Ganti store aktif (dipakai pengujian). Kirim `null` untuk kembali ke default DB. */
+export function setRateLimitStore(store: RateLimitStore | null): void {
+  activeStore = store;
+}
+
 /** Kategori endpoint AI yang dibatasi (per pengguna). */
 export type AiBucket = "formula" | "scan" | "help" | "embedding";
 
@@ -74,16 +169,27 @@ const RULES: Record<AiBucket, RateLimitRule> = {
   embedding: { limit: 10, windowMs: HOUR },
 };
 
-const LIMITERS: Record<AiBucket, SlidingWindowLimiter> = {
-  formula: new SlidingWindowLimiter(RULES.formula),
-  scan: new SlidingWindowLimiter(RULES.scan),
-  help: new SlidingWindowLimiter(RULES.help),
-  embedding: new SlidingWindowLimiter(RULES.embedding),
-};
-
-/** Cek kuota untuk seorang pengguna pada kategori tertentu. */
-export function checkAiRateLimit(bucket: AiBucket, userId: string, now?: number): RateLimitResult {
-  return LIMITERS[bucket].check(userId, now);
+/**
+ * Cek kuota untuk seorang pengguna pada kategori tertentu.
+ * Memakai store Postgres; bila gagal, otomatis fallback ke in-memory.
+ */
+export async function checkAiRateLimit(
+  bucket: AiBucket,
+  userId: string,
+  now?: number,
+): Promise<RateLimitResult> {
+  const rule = RULES[bucket];
+  const at = now ?? Date.now();
+  try {
+    const store = await getStore();
+    return await store.hit(bucket, userId, rule, at);
+  } catch (err) {
+    console.warn(
+      "[rate-limit] store DB gagal; memakai in-memory:",
+      err instanceof Error ? err.message : err,
+    );
+    return memoryStore.hit(bucket, userId, rule, at);
+  }
 }
 
 /** Aturan yang berlaku (untuk pesan/informasi). */
@@ -91,11 +197,7 @@ export function aiRateLimitRule(bucket: AiBucket): RateLimitRule {
   return RULES[bucket];
 }
 
-/** Bersihkan state limiter (dipakai pengujian). */
-export function resetAiRateLimits(bucket?: AiBucket): void {
-  if (bucket === undefined) {
-    for (const limiter of Object.values(LIMITERS)) limiter.reset();
-  } else {
-    LIMITERS[bucket].reset();
-  }
+/** Bersihkan state store in-memory (dipakai pengujian). Tidak menyentuh tabel DB. */
+export function resetAiRateLimits(): void {
+  memoryStore = createMemoryStore();
 }

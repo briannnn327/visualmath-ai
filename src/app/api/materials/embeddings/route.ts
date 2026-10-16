@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   if (!user) return unauthorized();
   if (user.role !== "dosen" && user.role !== "admin") return forbidden();
 
-  const quota = checkAiRateLimit("embedding", user.id);
+  const quota = await checkAiRateLimit("embedding", user.id);
   if (!quota.allowed) {
     return tooManyRequests(
       "Terlalu banyak backfill embedding. Coba lagi nanti.",

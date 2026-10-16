@@ -110,6 +110,51 @@ export async function deleteUser(id: string): Promise<void> {
   await prisma.user.delete({ where: { id } });
 }
 
+/* ---------- Reset kata sandi ---------- */
+
+export async function updateUserPassword(userId: string, passwordHash: string): Promise<void> {
+  await prisma.user.update({ where: { id: userId }, data: { password: passwordHash } });
+}
+
+/** Buat token reset baru; menghapus token lama milik pengguna agar hanya satu yang aktif. */
+export async function createPasswordReset(data: {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  expiresAt: Date;
+}): Promise<void> {
+  await prisma.$transaction([
+    prisma.passwordResetToken.deleteMany({ where: { userId: data.userId } }),
+    prisma.passwordResetToken.create({
+      data: {
+        id: data.id,
+        userId: data.userId,
+        tokenHash: data.tokenHash,
+        expiresAt: data.expiresAt,
+      },
+    }),
+  ]);
+}
+
+export async function findPasswordResetByHash(tokenHash: string): Promise<{
+  id: string;
+  userId: string;
+  expiresAt: Date;
+  usedAt: Date | null;
+} | null> {
+  const row = await prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+  if (!row) return null;
+  return { id: row.id, userId: row.userId, expiresAt: row.expiresAt, usedAt: row.usedAt };
+}
+
+export async function markPasswordResetUsed(id: string): Promise<void> {
+  await prisma.passwordResetToken.update({ where: { id }, data: { usedAt: new Date() } });
+}
+
+export async function deletePasswordResetsForUser(userId: string): Promise<void> {
+  await prisma.passwordResetToken.deleteMany({ where: { userId } });
+}
+
 /* ---------- Topics ---------- */
 export async function listTopics(): Promise<Topic[]> {
   const rows = await prisma.topic.findMany({ orderBy: { order: "asc" } });

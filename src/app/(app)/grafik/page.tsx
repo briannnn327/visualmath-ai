@@ -30,6 +30,8 @@ export default function GrafikPage() {
   const [error, setError] = useState<string | null>(null);
   const started = useRef(false);
 
+  const graphOff = result?.graphEnabled === false;
+
   async function run() {
     setError(null);
     try {
@@ -94,7 +96,8 @@ export default function GrafikPage() {
                 type="checkbox"
                 checked={showDerivative}
                 onChange={(e) => setShowDerivative(e.target.checked)}
-                className="h-4 w-4 accent-[var(--color-primary)]"
+                disabled={graphOff}
+                className="h-4 w-4 accent-[var(--color-primary)] disabled:opacity-50"
               />
               Tampilkan f′(x)
             </label>
@@ -128,17 +131,32 @@ export default function GrafikPage() {
         <>
           <Card>
             <CardContent className="p-5">
-              <MathPlot
-                segments={result.segments}
-                derivativeSegments={result.derivativeSegments}
-                points={result.points}
-                derivativePoints={result.derivativePoints}
-                roots={result.roots}
-                extrema={result.extrema}
-                expressionLabel={`f(${result.variable}) = ${result.pretty}`}
-                showDerivative={showDerivative}
-                height={460}
-              />
+              {graphOff ? (
+                <div className="flex flex-col items-center gap-3 py-10 text-center">
+                  <span className="grid h-14 w-14 place-items-center rounded-2xl bg-surface-container-high text-on-surface-variant">
+                    <Icon name="warning" size={26} />
+                  </span>
+                  <h3 className="font-display text-lg font-bold text-on-surface">
+                    Simulasi grafik dinonaktifkan
+                  </h3>
+                  <p className="max-w-md text-sm text-on-surface-variant">
+                    Admin menonaktifkan fitur simulasi grafik. Turunan, akar, dan titik ekstrem
+                    tetap dihitung dan ditampilkan di bawah.
+                  </p>
+                </div>
+              ) : (
+                <MathPlot
+                  segments={result.segments}
+                  derivativeSegments={result.derivativeSegments}
+                  points={result.points}
+                  derivativePoints={result.derivativePoints}
+                  roots={result.roots}
+                  extrema={result.extrema}
+                  expressionLabel={`f(${result.variable}) = ${result.pretty}`}
+                  showDerivative={showDerivative}
+                  height={460}
+                />
+              )}
             </CardContent>
           </Card>
 

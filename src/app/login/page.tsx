@@ -129,6 +129,15 @@ export default function LoginPage() {
               {!loading && <Icon name="send" size={18} />}
               Masuk
             </Button>
+
+            <div className="text-center">
+              <Link
+                href="/forgot-password"
+                className="text-sm font-semibold text-primary hover:underline"
+              >
+                Lupa kata sandi?
+              </Link>
+            </div>
           </form>
 
           <div className="mt-6 rounded-2xl border border-outline-variant bg-surface-container/60 p-4">

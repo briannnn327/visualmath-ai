@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Field, Input } from "@/components/ui/input";
 import { useToastStore } from "@/components/ui/toast";
+import { PASSWORD_MIN_LENGTH } from "@/lib/schemas";
 import { type RegisterPayload, useAuthStore } from "@/lib/store/authStore";
 import type { Role } from "@/lib/types";
 
@@ -148,11 +149,10 @@ export default function RegisterPage() {
                 <Input
                   id="password"
                   type={show ? "text" : "password"}
-                  placeholder="Minimal 4 karakter"
+                  placeholder={`Minimal ${PASSWORD_MIN_LENGTH} karakter`}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={4}
+                  minLength={PASSWORD_MIN_LENGTH}
                 />
                 <button
                   type="button"

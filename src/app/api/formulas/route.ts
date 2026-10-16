@@ -12,6 +12,11 @@ import {
 import { analyzeExpression, ParseError } from "@/lib/math/parser";
 import { type FormulaInput, formulaInputSchema } from "@/lib/schemas";
 import { apiUser, badRequest, tooManyRequests, unauthorized } from "@/lib/server/api-auth";
+import {
+  applyGraphGate,
+  disabledStepExplain,
+  resolveFormulaFlags,
+} from "@/lib/server/feature-gates";
 import { checkAiRateLimit } from "@/lib/server/rate-limit";
 import type { FormulaAnalysis, FormulaRecord } from "@/lib/types";
 import { uid } from "@/lib/utils";
@@ -43,7 +48,7 @@ export async function POST(request: NextRequest) {
   const user = await apiUser(request);
   if (!user) return unauthorized();
 
-  const quota = checkAiRateLimit("formula", user.id);
+  const quota = await checkAiRateLimit("formula", user.id);
   if (!quota.allowed) {
     return tooManyRequests(
       "Terlalu banyak analisis formula. Coba lagi nanti.",
@@ -73,19 +78,14 @@ export async function POST(request: NextRequest) {
   }
 
   const cfg = await getAIConfig();
-  const stepExplain = cfg?.features.stepExplain ?? true;
-  if (!stepExplain) {
-    analysis.steps = [
-      {
-        title: "Fitur penjelasan langkah dinonaktifkan",
-        math: analysis.derivativePretty,
-        description:
-          "Admin menonaktifkan penjelasan langkah-demi-langkah. Hasil turunan tetap ditampilkan.",
-      },
-    ];
+  const flags = resolveFormulaFlags(cfg);
+  if (!flags.stepExplain) {
+    analysis.steps = disabledStepExplain(analysis);
   }
 
-  if (stepExplain) {
+  analysis = applyGraphGate(analysis, flags.graphSimulation);
+
+  if (flags.stepExplain) {
     try {
       const query = `${analysis.pretty} — aturan: ${analysis.rulesUsed.join(", ")}`;
       const chunks = await searchMaterials(query, {
