@@ -50,3 +50,6 @@ next-env.d.ts
 .vercel
 
 /src/generated/prisma
+
+# POC OCR — gambar contoh dibuat ulang oleh scripts/poc-ocr/gen_images.py
+/scripts/poc-ocr/img/
