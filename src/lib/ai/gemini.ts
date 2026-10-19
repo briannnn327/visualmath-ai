@@ -24,6 +24,13 @@ import type { AIConfig, FormulaAnalysis } from "@/lib/types";
 
 const DEFAULT_MODEL = "gemini-3.8-flash";
 
+/**
+ * Model khusus OCR (vision). Sebagian model Gemini teks-saja (mis. gemini-3.8-flash
+ * menolak gambar), jadi OCR tidak memakai model teks yang dikonfigurasi admin,
+ * melainkan daftar model yang mendukung input gambar — dicoba berurutan.
+ */
+const VISION_MODELS = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-3-flash-preview"];
+
 function apiKey(): string {
   return (process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? process.env.GEMINI_API_KEY ?? "").trim();
 }
@@ -295,27 +302,35 @@ export async function ocrMathImage(
   const image = parseDataUrl(imageDataUrl);
   if (!image) throw new Error("Format gambar tidak didukung");
 
-  const model = resolveModel(config?.model);
-  const response = await withRetry(() =>
-    getClient().models.generateContent({
-      model,
-      contents: [
-        { inlineData: { mimeType: image.mimeType, data: image.data } },
-        { text: buildOcrPrompt(topics) },
-      ],
-      config: {
-        systemInstruction:
-          "Kamu adalah pembaca soal matematika. Ekstrak ekspresi dengan teliti, jangan menghitung.",
-        temperature: 0,
-        maxOutputTokens: clamp(config?.maxTokens ?? 1024, 256, 4096),
-        responseMimeType: "application/json",
-        responseJsonSchema: OCR_SCHEMA,
-        thinkingConfig: { thinkingBudget: 0 },
-      },
-    }),
-  );
+  let lastError: unknown;
+  for (const model of VISION_MODELS) {
+    try {
+      const response = await withRetry(() =>
+        getClient().models.generateContent({
+          model,
+          contents: [
+            { inlineData: { mimeType: image.mimeType, data: image.data } },
+            { text: buildOcrPrompt(topics) },
+          ],
+          config: {
+            systemInstruction:
+              "Kamu adalah pembaca soal matematika. Ekstrak ekspresi dengan teliti, jangan menghitung.",
+            temperature: 0,
+            maxOutputTokens: clamp(config?.maxTokens ?? 1024, 256, 4096),
+            responseMimeType: "application/json",
+            responseJsonSchema: OCR_SCHEMA,
+            thinkingConfig: { thinkingBudget: 0 },
+          },
+        }),
+      );
 
-  const parsed = parseOcr(response.text);
-  if (!parsed) return null;
-  return { ...parsed, model };
+      const parsed = parseOcr(response.text);
+      if (parsed) return { ...parsed, model };
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (lastError) throw lastError;
+  return null;
 }
