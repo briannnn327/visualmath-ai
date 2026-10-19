@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
   const question = pool[Math.floor(Math.random() * pool.length)];
   const topic = await getTopicById(question.topicId);
-  const { expectedAnswer: _ea, ...safeQuestion } = question as any;
+  const { expectedAnswer: _ea, ...safeQuestion } = question;
 
   return NextResponse.json({
     question: { ...safeQuestion, topicTitle: topic?.title ?? "" },

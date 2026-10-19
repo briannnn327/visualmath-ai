@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     : -8;
   const p: Progress = prev ?? {
     userId: user.id as UserId,
-    topicId: question.topicId as any,
+    topicId: question.topicId,
     mastery: 0,
     attempts: 0,
     solved: 0,
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
   const updated: Progress = {
     userId: user.id as UserId,
-    topicId: question.topicId as any,
+    topicId: question.topicId,
     mastery,
     attempts: p.attempts + 1,
     solved: p.solved + (correct ? 1 : 0),

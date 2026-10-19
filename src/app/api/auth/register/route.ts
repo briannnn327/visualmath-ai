@@ -4,7 +4,7 @@ import { createUser, findUserByEmail, recordActivity } from "@/lib/db/store";
 import { registerSchema } from "@/lib/schemas";
 import { badRequest, toPublicUser } from "@/lib/server/api-auth";
 import { hashPassword } from "@/lib/server/password";
-import type { User, UserId } from "@/lib/types";
+import type { User } from "@/lib/types";
 import { uid } from "@/lib/utils";
 
 export async function POST(request: Request) {

@@ -119,7 +119,7 @@ export async function PATCH(request: NextRequest) {
   if (!kelas) return notFound("Kelas tidak ditemukan");
   if (kelas.dosenId !== user.id && user.role !== "admin") return forbidden();
 
-  const update: any = {};
+  const update: Parameters<typeof updateKelas>[1] = {};
   if (patch.kode) update.kode = patch.kode.toUpperCase();
   if (patch.nama) update.nama = patch.nama;
   if (patch.dosenId) {

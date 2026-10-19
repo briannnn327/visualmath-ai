@@ -21,7 +21,7 @@ import {
   unauthorized,
 } from "@/lib/server/api-auth";
 import { hashPassword } from "@/lib/server/password";
-import type { User, UserId } from "@/lib/types";
+import type { User } from "@/lib/types";
 import { uid } from "@/lib/utils";
 
 async function withMeta(u: User) {
@@ -114,7 +114,7 @@ export async function PATCH(request: NextRequest) {
   )
     return badRequest("Minimal harus ada satu admin");
 
-  const updateData: any = {};
+  const updateData: Parameters<typeof updateUser>[1] = {};
   if (patch.name) updateData.name = patch.name;
   if (patch.email && patch.email !== target.email) {
     const existing = await findUserByEmail(patch.email);

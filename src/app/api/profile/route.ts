@@ -53,7 +53,11 @@ export async function PATCH(request: NextRequest) {
     return badRequest(err instanceof Error ? err.message : "Data tidak valid");
   }
 
-  const updateData: any = { name: input.name, nim: input.nim, prodi: input.prodi };
+  const updateData: Parameters<typeof updateUser>[1] = {
+    name: input.name,
+    nim: input.nim,
+    prodi: input.prodi,
+  };
   if (input.password) updateData.password = hashPassword(input.password);
   const updated = await updateUser(user.id, updateData);
 
