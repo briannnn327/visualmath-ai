@@ -141,7 +141,7 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const user = await apiUser(request);
   if (!user) return unauthorized();
-  if (user.role !== "admin") return forbidden();
+  if (user.role !== "admin" && user.role !== "dosen") return forbidden();
 
   let body: unknown;
   try {
@@ -152,6 +152,7 @@ export async function DELETE(request: NextRequest) {
   const { id } = (body ?? {}) as { id?: string };
   const kelas = await getKelasById(String(id));
   if (!kelas) return notFound("Kelas tidak ditemukan");
+  if (user.role !== "admin" && kelas.dosenId !== user.id) return forbidden();
   await deleteKelas(kelas.id);
   await recordActivity({
     userId: user.id,

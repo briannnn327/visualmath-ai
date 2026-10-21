@@ -52,8 +52,10 @@ export interface SystemMetrics {
   errorsToday: number;
   warningsToday: number;
   avgResponseMs: number;
-  uptime: number;
-  models: number;
+  latencySamples: number;
+  uptimeSec: number;
+  activeModel: string;
+  activeProvider: string;
 }
 
 /* ---------- Topik ---------- */
@@ -93,6 +95,16 @@ export function useFormulaHistory(enabled = true) {
       return records;
     },
     enabled,
+  });
+}
+
+export function useDeleteFormula() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.del<{ ok: boolean }>("/api/formulas", { id }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["formula-history"] });
+    },
   });
 }
 

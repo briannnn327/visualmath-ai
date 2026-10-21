@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { isModelForProvider } from "@/lib/ai/models";
 import { getAIConfig, recordActivity, updateAIConfig } from "@/lib/db/store";
 import { type AIConfigInput, aiConfigSchema, parseBody } from "@/lib/schemas";
 import { apiUser, badRequest, forbidden, unauthorized } from "@/lib/server/api-auth";
@@ -30,6 +31,10 @@ export async function PATCH(request: NextRequest) {
     input = parseBody<AIConfigInput>(body, aiConfigSchema);
   } catch (err) {
     return badRequest(err instanceof Error ? err.message : "Data tidak valid");
+  }
+
+  if (!isModelForProvider(input.provider, input.model)) {
+    return badRequest(`Model "${input.model}" tidak valid untuk provider ${input.provider}`);
   }
 
   const config = await updateAIConfig({

@@ -23,13 +23,6 @@ export type HistoryId = Brand<string, "HistoryId">;
 export type LogId = Brand<string, "LogId">;
 export type ConfigId = Brand<string, "ConfigId">;
 
-/* ---------- Discriminated union state async ---------- */
-export type AsyncState<T> =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "success"; data: T }
-  | { status: "error"; error: string };
-
 /* ---------- Entities ---------- */
 export interface User {
   id: UserId;
@@ -87,10 +80,6 @@ export interface Question {
   expectedAnswer: string;
   explanation: string;
   hint?: string;
-}
-
-export interface QuestionWithTopic extends Question {
-  topicTitle: string;
 }
 
 export interface Progress {
@@ -224,15 +213,6 @@ export interface RagCitation {
 }
 
 /* ---------- Latihan adaptif ---------- */
-export interface ExerciseSessionStats {
-  sessionId: string;
-  topicId: TopicId;
-  total: number;
-  correct: number;
-  xpEarned: number;
-  difficulty: Difficulty;
-}
-
 export interface AnswerResult {
   questionId: QuestionId;
   correct: boolean;
@@ -274,18 +254,6 @@ export interface ClassWithStats extends Kelas {
   studentCount: number;
   avgMastery: number;
   activeCount: number;
-}
-
-export interface DosenDashboardData {
-  user: PublicUser;
-  stats: {
-    classes: number;
-    students: number;
-    materials: number;
-    avgMastery: number;
-  };
-  classes: ClassWithStats[];
-  recent: HistoryRecord[];
 }
 
 export interface AdminMetrics {

@@ -213,8 +213,17 @@ export async function updateKelas(
   return mapKelas(row);
 }
 
+/**
+ * Hapus kelas beserta ketergantungannya secara aman:
+ * lepaskan referensi anggota (User.kelasId) dan materi yang menempel,
+ * agar tidak menabrak constraint foreign key.
+ */
 export async function deleteKelas(id: string): Promise<void> {
-  await prisma.kelas.delete({ where: { id } });
+  await prisma.$transaction([
+    prisma.user.updateMany({ where: { kelasId: id }, data: { kelasId: null } }),
+    prisma.materialItem.deleteMany({ where: { kelasId: id } }),
+    prisma.kelas.delete({ where: { id } }),
+  ]);
 }
 
 /* ---------- Progress ---------- */
@@ -390,6 +399,12 @@ export async function listFormulasByUser(userId: string): Promise<FormulaRecord[
     orderBy: { createdAt: "desc" },
   });
   return rows.map(mapFormula);
+}
+
+/** Hapus satu riwayat formula; hanya milik pengguna itu sendiri. */
+export async function deleteFormula(id: string, userId: string): Promise<boolean> {
+  const res = await prisma.formulaRecord.deleteMany({ where: { id, userId } });
+  return res.count > 0;
 }
 
 /* ---------- AIConfig ---------- */

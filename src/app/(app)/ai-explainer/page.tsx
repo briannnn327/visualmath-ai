@@ -12,7 +12,12 @@ import { Field, Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToastStore } from "@/components/ui/toast";
-import { useFormulaAnalyze, useFormulaHistory, useTopics } from "@/lib/hooks/queries";
+import {
+  useDeleteFormula,
+  useFormulaAnalyze,
+  useFormulaHistory,
+  useTopics,
+} from "@/lib/hooks/queries";
 import type { FormulaAnalysis } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
@@ -28,6 +33,7 @@ const presets = [
 export default function AIExplainerPage() {
   const analyze = useFormulaAnalyze();
   const history = useFormulaHistory();
+  const deleteFormula = useDeleteFormula();
   const topics = useTopics();
   const pushToast = useToastStore((s) => s.push);
   const searchParams = useSearchParams();
@@ -398,19 +404,31 @@ export default function AIExplainerPage() {
                 </CardHeader>
                 <CardContent className="space-y-1 pt-5">
                   {(history.data ?? []).slice(0, 6).map((r) => (
-                    <button
+                    <div
                       key={r.id}
-                      type="button"
-                      onClick={() => setExpression(r.expression)}
-                      className="flex w-full items-center justify-between gap-2 rounded-xl p-2 text-left transition-colors hover:bg-surface-container"
+                      className="group flex w-full items-center justify-between gap-2 rounded-xl p-2 transition-colors hover:bg-surface-container"
                     >
-                      <span className="min-w-0 flex-1 truncate font-mono text-sm text-on-surface">
-                        {r.display}
-                      </span>
-                      <span className="shrink-0 text-[11px] text-on-surface-variant">
-                        {formatDate(r.createdAt)}
-                      </span>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setExpression(r.expression)}
+                        className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
+                      >
+                        <span className="min-w-0 flex-1 truncate font-mono text-sm text-on-surface">
+                          {r.display}
+                        </span>
+                        <span className="shrink-0 text-[11px] text-on-surface-variant">
+                          {formatDate(r.createdAt)}
+                        </span>
+                      </button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Hapus riwayat"
+                        onClick={() => deleteFormula.mutate(r.id)}
+                      >
+                        <Icon name="trash" size={15} />
+                      </Button>
+                    </div>
                   ))}
                   {(history.data ?? []).length === 0 && (
                     <p className="text-sm text-on-surface-variant">

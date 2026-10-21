@@ -24,8 +24,6 @@ export const loginSchema = z.object({
   password: z.string("Kata sandi wajib diisi").min(1, "Kata sandi wajib diisi").max(128),
 });
 
-export type LoginInput = z.infer<typeof loginSchema>;
-
 export const registerSchema = z
   .object({
     name: z.string().trim().min(3, "Nama minimal 3 karakter").max(80, "Nama maksimal 80 karakter"),
@@ -45,8 +43,6 @@ export const registerSchema = z
       });
     }
   });
-
-export type RegisterInput = z.infer<typeof registerSchema>;
 
 export const forgotPasswordSchema = z.object({
   email: emailSchema,
@@ -110,18 +106,12 @@ export const exerciseAnswerSchema = z.object({
   timeMs: z.number().int().nonnegative().max(3_600_000).optional(),
 });
 
-export type ExerciseAnswerInput = z.infer<typeof exerciseAnswerSchema>;
-
 export const exerciseHelpSchema = z.object({
   questionId: z.string().min(1),
   topicId: z.string().min(1),
 });
 
 export type ExerciseHelpInput = z.infer<typeof exerciseHelpSchema>;
-
-export const exerciseStartSchema = z.object({
-  topicId: z.string().min(1),
-});
 
 export const materialSchema = z.object({
   kelasId: z.string().min(1, "Pilih kelas terlebih dahulu"),

@@ -5,13 +5,20 @@ import { buildReference, searchMaterials, toCitations } from "@/lib/ai/rag";
 import {
   addHistory,
   createFormula,
+  deleteFormula,
   getAIConfig,
   listFormulasByUser,
   recordActivity,
 } from "@/lib/db/store";
 import { analyzeExpression, ParseError } from "@/lib/math/parser";
-import { type FormulaInput, formulaInputSchema } from "@/lib/schemas";
-import { apiUser, badRequest, tooManyRequests, unauthorized } from "@/lib/server/api-auth";
+import { deleteParamSchema, type FormulaInput, formulaInputSchema } from "@/lib/schemas";
+import {
+  apiUser,
+  badRequest,
+  notFound,
+  tooManyRequests,
+  unauthorized,
+} from "@/lib/server/api-auth";
 import {
   applyGraphGate,
   disabledStepExplain,
@@ -140,4 +147,32 @@ export async function GET(request: NextRequest) {
   if (!user) return unauthorized();
   const records = await listFormulasByUser(user.id);
   return NextResponse.json({ records: records.slice(0, 8) });
+}
+
+/** Hapus satu riwayat analisis milik pengguna. */
+export async function DELETE(request: NextRequest) {
+  const user = await apiUser(request);
+  if (!user) return unauthorized();
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return badRequest("Request body tidak valid");
+  }
+  const parsed = deleteParamSchema.safeParse(body);
+  if (!parsed.success) {
+    return badRequest(parsed.error.issues[0]?.message ?? "ID tidak valid");
+  }
+  const removed = await deleteFormula(parsed.data.id, user.id);
+  if (!removed) return notFound("Riwayat tidak ditemukan");
+
+  await recordActivity({
+    userId: user.id,
+    actorName: user.name,
+    action: "formula.delete",
+    target: parsed.data.id,
+    severity: "info",
+  });
+  return NextResponse.json({ ok: true });
 }

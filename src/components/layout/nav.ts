@@ -30,17 +30,6 @@ export const adminNav: NavItem[] = [
   { href: "/admin/monitoring", label: "Monitoring", icon: "monitoring" },
 ];
 
-export function navFor(role: Role): NavItem[] {
-  switch (role) {
-    case "dosen":
-      return dosenNav;
-    case "admin":
-      return adminNav;
-    default:
-      return mahasiswaNav;
-  }
-}
-
 export function homeFor(role: Role): string {
   return role === "dosen" ? "/dosen" : role === "admin" ? "/admin" : "/dashboard";
 }

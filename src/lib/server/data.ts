@@ -287,7 +287,7 @@ export async function getAdminData(): Promise<AdminDashboardData> {
   const todayLogs = logs.filter((l) => new Date(l.createdAt).getTime() >= todayMs);
   const distinctUsers = new Set(todayLogs.map((l) => l.userId?.toString() ?? "sistem"));
   const todayHistory = history.filter(
-    (h) => h.userId === "u-m0" && new Date(h.createdAt).getTime() >= todayMs,
+    (h) => h.kind === "quiz" && new Date(h.createdAt).getTime() >= todayMs,
   );
   const avgXpToday =
     todayHistory.length > 0
@@ -338,15 +338,4 @@ export async function getAdminData(): Promise<AdminDashboardData> {
     .slice(0, 12);
 
   return { metrics, trend, logs: recentLogs };
-}
-
-/* ---------------- Umum ---------------- */
-
-export async function allUsers(): Promise<User[]> {
-  return listUsers();
-}
-
-export async function getAllKelas(): Promise<Kelas[]> {
-  const rows = await listKelas();
-  return rows.sort((a, b) => a.nama.localeCompare(b.nama));
 }

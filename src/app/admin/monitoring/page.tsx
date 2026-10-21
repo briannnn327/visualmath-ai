@@ -24,13 +24,13 @@ const LOG_DATE_FMT = new Intl.DateTimeFormat("id-ID", {
   dateStyle: "short",
 });
 
-function formatUptime(pct: number): string {
-  const totalMinutes = Math.round(pct * 14.4);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours === 0) return `${minutes} menit`;
-  if (minutes === 0) return `${hours} jam`;
-  return `${hours} jam ${minutes} menit`;
+function formatDuration(totalSec: number): string {
+  const hours = Math.floor(totalSec / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const seconds = totalSec % 60;
+  if (hours > 0) return `${hours}j ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
 }
 
 interface StatCardProps {
@@ -64,21 +64,29 @@ function StatCard({ icon, label, value, color, loading }: StatCardProps) {
 }
 
 const ACTION_LABELS: Record<string, string> = {
-  "ai.configure": "Konfigurasi AI",
+  login: "Login",
+  register: "Registrasi",
   "auth.login": "Login",
-  "auth.logout": "Logout",
-  "formula.analyze": "Analisis Formula",
-  "exercise.complete": "Selesai Latihan",
+  "auth.failed": "Login Gagal",
+  "ai.configure": "Konfigurasi AI",
+  "ai.explain": "Penjelasan AI",
+  "formula.delete": "Hapus Riwayat Formula",
+  "ai.scan": "Scan Soal",
+  "ai.timeout": "AI Timeout",
+  "quiz.submit": "Selesai Kuis",
+  "profile.update": "Ubah Profil",
+  "password.reset.request": "Permintaan Reset",
+  "password.reset": "Reset Kata Sandi",
   "material.create": "Buat Materi",
   "material.update": "Edit Materi",
   "material.delete": "Hapus Materi",
+  "material.embed": "Embedding Materi",
   "user.create": "Buat Pengguna",
   "user.update": "Edit Pengguna",
   "user.delete": "Hapus Pengguna",
   "class.create": "Buat Kelas",
   "class.update": "Edit Kelas",
   "class.delete": "Hapus Kelas",
-  "system.seed": "Seed Database",
 };
 
 function actionLabel(action: string): string {
@@ -122,7 +130,7 @@ export default function AdminMonitoringPage() {
         />
         <StatCard
           icon="database"
-          label="Request Hari Ini"
+          label="Aktivitas Hari Ini"
           value={metrics?.requestsToday ?? 0}
           color="bg-secondary"
           loading={metricsLoading}
@@ -143,22 +151,26 @@ export default function AdminMonitoringPage() {
         />
         <StatCard
           icon="gauge"
-          label="Rata-rata Response"
+          label={`Latensi DB (n=${metrics?.latencySamples ?? 0})`}
           value={metricsLoading ? "—" : `${metrics?.avgResponseMs ?? 0} ms`}
           color="bg-primary"
           loading={metricsLoading}
         />
         <StatCard
           icon="monitoring"
-          label="Uptime"
-          value={metricsLoading ? "—" : formatUptime(metrics?.uptime ?? 0)}
+          label="Uptime Proses"
+          value={metricsLoading ? "—" : formatDuration(metrics?.uptimeSec ?? 0)}
           color="bg-success"
           loading={metricsLoading}
         />
         <StatCard
           icon="database"
-          label="Model"
-          value={metrics?.models ?? 0}
+          label="Model AI Aktif"
+          value={
+            metricsLoading
+              ? "—"
+              : `${metrics?.activeModel ?? "-"} (${metrics?.activeProvider ?? "-"})`
+          }
           color="bg-secondary"
           loading={metricsLoading}
         />

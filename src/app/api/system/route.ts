@@ -2,6 +2,12 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getAIConfig, listLogs, listUsers } from "@/lib/db/store";
 import { apiUser, forbidden, unauthorized } from "@/lib/server/api-auth";
+import {
+  avgLatencyMs,
+  latencySampleCount,
+  processUptimeSec,
+  recordLatency,
+} from "@/lib/server/metrics";
 
 export async function GET(request: NextRequest) {
   const user = await apiUser(request);
@@ -14,7 +20,9 @@ export async function GET(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayMs = today.getTime();
+    const t0 = performance.now();
     const [logs, users, cfg] = await Promise.all([listLogs(), listUsers(), getAIConfig()]);
+    recordLatency(performance.now() - t0);
     const logsToday = logs.filter((l) => new Date(l.createdAt).getTime() >= todayMs);
     const metrics = {
       totalUsers: users.length,
@@ -22,10 +30,11 @@ export async function GET(request: NextRequest) {
       requestsToday: logsToday.length,
       errorsToday: logsToday.filter((l) => l.severity === "error").length,
       warningsToday: logsToday.filter((l) => l.severity === "warning").length,
-      avgResponseMs: 840 + Math.floor(Math.random() * 240),
-      uptime: 99.98,
-      models: new Set(logs.filter((l) => l.action === "ai.configure").map(() => cfg?.model ?? "-"))
-        .size,
+      avgResponseMs: avgLatencyMs(),
+      latencySamples: latencySampleCount(),
+      uptimeSec: processUptimeSec(),
+      activeModel: cfg?.model ?? "-",
+      activeProvider: cfg?.provider ?? "-",
     };
     return NextResponse.json({ metrics });
   }

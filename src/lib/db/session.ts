@@ -68,12 +68,3 @@ export async function getSession(token: string | undefined): Promise<SessionInfo
 export function destroySession(_token?: string): void {
   return;
 }
-
-/** Untuk halaman RSC: baca sesi dari cookie header. */
-export async function sessionFromHeader(
-  cookieHeader: string | null | undefined,
-): Promise<SessionInfo | undefined> {
-  if (!cookieHeader) return undefined;
-  const match = /(?:^|;\s*)vma_session=([^;]+)/.exec(cookieHeader);
-  return getSession(match?.[1]);
-}
