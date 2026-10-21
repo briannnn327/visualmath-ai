@@ -26,6 +26,8 @@ export const dosenNav: NavItem[] = [
 export const adminNav: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: "grid" },
   { href: "/admin/pengguna", label: "Pengguna", icon: "users" },
+  { href: "/admin/kelas", label: "Kelas", icon: "school" },
+  { href: "/admin/topik", label: "Topik & Soal", icon: "book" },
   { href: "/admin/konfigurasi", label: "Konfigurasi AI", icon: "tune" },
   { href: "/admin/monitoring", label: "Monitoring", icon: "monitoring" },
 ];

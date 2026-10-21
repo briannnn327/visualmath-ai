@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { IconName } from "@/components/ui/icon";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
-import { useSystemLogs, useSystemMetrics } from "@/lib/hooks/queries";
+import { useRateLimits, useSystemLogs, useSystemMetrics } from "@/lib/hooks/queries";
 
 const SEVERITY_OPTIONS = ["Semua", "Info", "Warning", "Error"] as const;
 type SeverityLabel = (typeof SEVERITY_OPTIONS)[number];
@@ -87,6 +87,7 @@ const ACTION_LABELS: Record<string, string> = {
   "class.create": "Buat Kelas",
   "class.update": "Edit Kelas",
   "class.delete": "Hapus Kelas",
+  "class.join": "Gabung Kelas",
 };
 
 function actionLabel(action: string): string {
@@ -103,6 +104,9 @@ export default function AdminMonitoringPage() {
   const [severityLabel, setSeverityLabel] = useState<SeverityLabel>("Semua");
   const { data: metrics, isLoading: metricsLoading } = useSystemMetrics();
   const { data: logs, isLoading: logsLoading } = useSystemLogs(SEVERITY_MAP[severityLabel]);
+  const { data: rateLimits, isLoading: rateLimitsLoading } = useRateLimits();
+
+  const ruleByBucket = new Map(rateLimits?.rules.map((r) => [r.bucket, r]) ?? []);
 
   return (
     <div className="space-y-6">
@@ -175,6 +179,74 @@ export default function AdminMonitoringPage() {
           loading={metricsLoading}
         />
       </div>
+
+      <Card>
+        <CardContent className="space-y-4 p-5">
+          <div>
+            <h3 className="font-display text-lg font-bold text-on-surface">Rate Limit AI</h3>
+            <p className="text-sm text-on-surface-variant">
+              Pemakaian kuota endpoint AI per pengguna dalam jendela berjalan.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {(rateLimits?.rules ?? []).map((r) => (
+              <Badge key={r.bucket} variant="outline">
+                {r.bucket}: {r.limit}/{r.windowMinutes} mnt
+              </Badge>
+            ))}
+          </div>
+
+          {rateLimitsLoading ? (
+            <SkeletonCard />
+          ) : (rateLimits?.usage.length ?? 0) === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <Icon name="check-circle" size={32} className="text-success/50" />
+              <p className="text-sm text-on-surface-variant">
+                Belum ada pemakaian kuota pada jendela ini.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-sm">
+                <thead>
+                  <tr className="border-b border-outline-variant bg-surface-container">
+                    <th className="px-4 py-3 text-left font-semibold text-on-surface">Kategori</th>
+                    <th className="px-4 py-3 text-left font-semibold text-on-surface">Pengguna</th>
+                    <th className="px-4 py-3 text-left font-semibold text-on-surface">Pemakaian</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(rateLimits?.usage ?? []).map((row) => {
+                    const rule = ruleByBucket.get(row.bucket);
+                    const pct = rule ? Math.round((row.count / rule.limit) * 100) : 0;
+                    const variant = pct >= 100 ? "error" : pct >= 80 ? "warning" : "info";
+                    return (
+                      <tr
+                        key={`${row.bucket}-${row.key}`}
+                        className="border-b border-outline-variant/50"
+                      >
+                        <td className="px-4 py-3">
+                          <Badge variant="neutral">{row.bucket}</Badge>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-on-surface-variant">
+                          {row.key}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant={variant}>
+                            {row.count}
+                            {rule ? `/${rule.limit}` : ""} {rule ? `(${pct}%)` : ""}
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="space-y-4 p-5">

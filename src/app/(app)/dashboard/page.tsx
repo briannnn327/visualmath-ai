@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { JoinClassCard } from "@/components/join-class-card";
 import { homeFor } from "@/components/layout/nav";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Progress } from "@/components/ui/progress";
-import { Ring } from "@/components/ui/ring";
 import { getCurrentPublicUser, getStudentData } from "@/lib/server/data";
 import type { ActivityKind } from "@/lib/types";
 import { formatDate, topicIcon } from "@/lib/utils";
@@ -212,20 +212,7 @@ export default async function DashboardPage() {
 
       {/* Rata-rata dan saran */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
-          <CardContent className="flex items-center justify-center gap-6 p-6">
-            <Ring
-              value={data.stats.avgMastery}
-              size={132}
-              label={`${data.stats.avgMastery}%`}
-              sublabel="Penguasaan"
-            />
-            <div className="space-y-2 text-sm">
-              <p className="font-semibold text-on-surface">Rata-rata mastery</p>
-              <p className="text-on-surface-variant">Dari topik yang sudah kamu kerjakan</p>
-            </div>
-          </CardContent>
-        </Card>
+        <JoinClassCard kelasName={data.kelasName} />
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Tips Belajar</CardTitle>

@@ -144,6 +144,43 @@ export const userAdminSchema = z.object({
 
 export type UserAdminInput = z.infer<typeof userAdminSchema>;
 
+export const questionTypeSchema = z.enum(["numeric", "choice", "truefalse"]);
+
+export const topicAdminSchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .min(2, "Slug minimal 2 karakter")
+    .max(60)
+    .regex(/^[a-z0-9-]+$/, "Slug hanya boleh huruf kecil, angka, dan tanda hubung"),
+  title: z.string().trim().min(3, "Judul minimal 3 karakter").max(120),
+  subtitle: z.string().trim().max(160).default(""),
+  description: z.string().trim().max(1000).default(""),
+  icon: z.string().trim().max(40).default("sparkle"),
+  color: z.string().trim().max(40).default("#6750A4"),
+  order: z.number().int().min(0).max(999).default(0),
+});
+
+export type TopicAdminInput = z.infer<typeof topicAdminSchema>;
+
+export const questionAdminSchema = z.object({
+  topicId: z.string().min(1, "Pilih topik terlebih dahulu"),
+  difficulty: difficultySchema,
+  type: questionTypeSchema,
+  prompt: z.string().trim().min(3, "Soal minimal 3 karakter").max(2000),
+  latex: z.string().trim().max(500).optional().nullable(),
+  options: z.array(z.string().trim().min(1)).max(8).optional(),
+  expectedAnswer: z.string().trim().min(1, "Jawaban benar wajib diisi").max(200),
+  explanation: z.string().trim().min(3, "Pembahasan minimal 3 karakter").max(3000),
+  hint: z.string().trim().max(500).optional().nullable(),
+});
+
+export type QuestionAdminInput = z.infer<typeof questionAdminSchema>;
+
+export const joinClassSchema = z.object({
+  kode: z.string().trim().min(2, "Kode kelas minimal 2 karakter").max(20),
+});
+
 export const profileSchema = z.object({
   name: z.string().trim().min(3).max(80),
   nim: z.string().trim().max(20).optional(),

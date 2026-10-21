@@ -27,6 +27,7 @@ import type {
   MaterialType,
   Progress,
   Question,
+  QuestionType,
   Role,
   Topic,
   User,
@@ -166,10 +167,102 @@ export async function getTopicById(id: string): Promise<Topic | null> {
   return row ? mapTopic(row) : null;
 }
 
+export async function createTopic(data: {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  icon: string;
+  color: string;
+  order: number;
+}): Promise<Topic> {
+  const row = await prisma.topic.create({
+    data: { ...data, formulaCount: 0, questionCount: 0 },
+  });
+  return mapTopic(row);
+}
+
+export async function updateTopic(
+  id: string,
+  data: Partial<{
+    slug: string;
+    title: string;
+    subtitle: string;
+    description: string;
+    icon: string;
+    color: string;
+    order: number;
+  }>,
+): Promise<Topic> {
+  const row = await prisma.topic.update({ where: { id }, data });
+  return mapTopic(row);
+}
+
+export async function deleteTopic(id: string): Promise<void> {
+  await prisma.topic.delete({ where: { id } });
+}
+
 /* ---------- Questions ---------- */
 export async function listQuestions(): Promise<Question[]> {
   const rows = await prisma.question.findMany();
   return rows.map(mapQuestion);
+}
+
+export async function getQuestionById(id: string): Promise<Question | null> {
+  const row = await prisma.question.findUnique({ where: { id } });
+  return row ? mapQuestion(row) : null;
+}
+
+export async function createQuestion(data: {
+  id: string;
+  topicId: string;
+  difficulty: Difficulty;
+  type: QuestionType;
+  prompt: string;
+  latex?: string | null;
+  options?: string[];
+  expectedAnswer: string;
+  explanation: string;
+  hint?: string | null;
+}): Promise<Question> {
+  const row = await prisma.question.create({
+    data: {
+      id: data.id,
+      topicId: data.topicId,
+      difficulty: data.difficulty,
+      type: data.type,
+      prompt: data.prompt,
+      latex: data.latex ?? null,
+      options: data.options ?? [],
+      expectedAnswer: data.expectedAnswer,
+      explanation: data.explanation,
+      hint: data.hint ?? null,
+    },
+  });
+  return mapQuestion(row);
+}
+
+export async function updateQuestion(
+  id: string,
+  data: Partial<{
+    topicId: string;
+    difficulty: Difficulty;
+    type: QuestionType;
+    prompt: string;
+    latex: string | null;
+    options: string[];
+    expectedAnswer: string;
+    explanation: string;
+    hint: string | null;
+  }>,
+): Promise<Question> {
+  const row = await prisma.question.update({ where: { id }, data });
+  return mapQuestion(row);
+}
+
+export async function deleteQuestion(id: string): Promise<void> {
+  await prisma.question.delete({ where: { id } });
 }
 
 /* ---------- Kelas ---------- */
@@ -186,6 +279,45 @@ export async function getKelasById(id: string): Promise<Kelas | null> {
     include: { mahasiswa: { select: { id: true } } },
   });
   return row ? mapKelas(row) : null;
+}
+
+/** Cari kelas berdasarkan kode (case-insensitive, huruf besar). */
+export async function getKelasByKode(kode: string): Promise<Kelas | null> {
+  const row = await prisma.kelas.findFirst({
+    where: { kode: { equals: kode.trim().toUpperCase(), mode: "insensitive" } },
+    include: { mahasiswa: { select: { id: true } } },
+  });
+  return row ? mapKelas(row) : null;
+}
+
+/**
+ * Gabungkan seorang mahasiswa ke kelas lewat kode. Menyambungkan relasi
+ * `mahasiswa` dan menyetel `User.kelasId`. Mengembalikan kelas yang diikuti.
+ */
+export async function joinKelasByKode(userId: string, kode: string): Promise<Kelas | null> {
+  const kelas = await getKelasByKode(kode);
+  if (!kelas) return null;
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: userId }, data: { kelasId: kelas.id } }),
+    prisma.kelas.update({
+      where: { id: kelas.id },
+      data: { mahasiswa: { connect: { id: userId } } },
+    }),
+  ]);
+  return getKelasById(kelas.id);
+}
+
+/** Keluarkan mahasiswa dari kelasnya (lepas relasi & kelasId). */
+export async function leaveKelas(userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user?.kelasId) return;
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: userId }, data: { kelasId: null } }),
+    prisma.kelas.update({
+      where: { id: user.kelasId },
+      data: { mahasiswa: { disconnect: { id: userId } } },
+    }),
+  ]);
 }
 
 export async function createKelas(data: {

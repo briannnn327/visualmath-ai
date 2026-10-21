@@ -5,7 +5,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AIConfigInput, MaterialInput, UserAdminInput } from "@/lib/schemas";
+import type {
+  AIConfigInput,
+  MaterialInput,
+  QuestionAdminInput,
+  TopicAdminInput,
+  UserAdminInput,
+} from "@/lib/schemas";
 import { api, qs } from "@/lib/services/api";
 import type {
   ActivityLog,
@@ -434,5 +440,133 @@ export function useUpdateProfile() {
       void qc.invalidateQueries({ queryKey: ["profile"] });
       void qc.invalidateQueries({ queryKey: ["topics"] });
     },
+  });
+}
+
+/* ---------- Gabung kelas (mahasiswa) ---------- */
+
+export function useJoinClass() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { kode: string }) => api.post<{ kelas: Kelas }>("/api/classes/join", input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["profile"] });
+      void qc.invalidateQueries({ queryKey: ["classes"] });
+    },
+  });
+}
+
+export function useLeaveClass() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.del<{ ok: boolean }>("/api/classes/join"),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["profile"] });
+      void qc.invalidateQueries({ queryKey: ["classes"] });
+    },
+  });
+}
+
+/* ---------- CRUD Topik (admin) ---------- */
+
+export function useCreateTopic() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TopicAdminInput) => api.post<{ topic: Topic }>("/api/topics", input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["topics"] });
+    },
+  });
+}
+
+export function useUpdateTopic() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...rest }: TopicAdminInput & { id: string }) =>
+      api.patch<{ topic: Topic }>("/api/topics", { id, ...rest }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["topics"] });
+    },
+  });
+}
+
+export function useDeleteTopic() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.del<{ ok: boolean }>("/api/topics", { id }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["topics"] });
+      void qc.invalidateQueries({ queryKey: ["admin-questions"] });
+    },
+  });
+}
+
+/* ---------- CRUD Soal (admin) ---------- */
+
+export function useAdminQuestions(topicId: string | null = null) {
+  return useQuery({
+    queryKey: ["admin-questions", topicId ?? "all"],
+    queryFn: async () => {
+      const { questions } = await api.get<{ questions: Question[] }>(
+        qs("/api/questions", { topicId: topicId ?? undefined }),
+      );
+      return questions;
+    },
+  });
+}
+
+export function useCreateQuestion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: QuestionAdminInput) =>
+      api.post<{ question: Question }>("/api/questions", input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin-questions"] });
+      void qc.invalidateQueries({ queryKey: ["topics"] });
+    },
+  });
+}
+
+export function useUpdateQuestion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...rest }: QuestionAdminInput & { id: string }) =>
+      api.patch<{ question: Question }>("/api/questions", { id, ...rest }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin-questions"] });
+      void qc.invalidateQueries({ queryKey: ["topics"] });
+    },
+  });
+}
+
+export function useDeleteQuestion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.del<{ ok: boolean }>("/api/questions", { id }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin-questions"] });
+      void qc.invalidateQueries({ queryKey: ["topics"] });
+    },
+  });
+}
+
+/* ---------- Rate limit (admin) ---------- */
+
+export interface RateLimitUsage {
+  bucket: string;
+  key: string;
+  count: number;
+  oldest: string | null;
+}
+export interface RateLimitInfo {
+  rules: Array<{ bucket: string; limit: number; windowMinutes: number }>;
+  usage: RateLimitUsage[];
+}
+
+export function useRateLimits() {
+  return useQuery({
+    queryKey: ["rate-limits"],
+    queryFn: () => api.get<RateLimitInfo>("/api/admin/rate-limits"),
+    refetchInterval: 60_000,
   });
 }

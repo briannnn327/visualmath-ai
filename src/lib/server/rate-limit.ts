@@ -197,6 +197,45 @@ export function aiRateLimitRule(bucket: AiBucket): RateLimitRule {
   return RULES[bucket];
 }
 
+/** Semua aturan rate limit aktif (untuk panel admin). */
+export function aiRateLimitRules(): Record<AiBucket, RateLimitRule> {
+  return RULES;
+}
+
+export interface RateLimitSnapshotRow {
+  bucket: string;
+  key: string;
+  count: number;
+  oldest: string | null;
+}
+
+/**
+ * Rekap pemakaian rate limit per (bucket, key) dalam jendela berjalan.
+ * Dipakai panel Monitoring admin; mengembalikan array kosong bila DB gagal.
+ */
+export async function rateLimitSnapshot(now = Date.now()): Promise<RateLimitSnapshotRow[]> {
+  try {
+    const { prisma } = await import("@/lib/db/prisma");
+    const maxWindow = Math.max(...Object.values(RULES).map((r) => r.windowMs));
+    const cutoff = new Date(now - maxWindow);
+    const rows = await prisma.$queryRawUnsafe<
+      Array<{ bucket: string; key: string; count: number | bigint; oldest: unknown }>
+    >(
+      'SELECT bucket, "key", COUNT(*)::int AS count, MIN("createdAt") AS oldest FROM "RateLimitHit" WHERE "createdAt" > $1 GROUP BY bucket, "key" ORDER BY count DESC',
+      cutoff,
+    );
+    return rows.map((r) => ({
+      bucket: r.bucket,
+      key: r.key,
+      count: Number(r.count),
+      oldest: r.oldest ? new Date(r.oldest as string | number | Date).toISOString() : null,
+    }));
+  } catch (err) {
+    console.warn("[rate-limit] gagal membaca snapshot:", err instanceof Error ? err.message : err);
+    return [];
+  }
+}
+
 /** Bersihkan state store in-memory (dipakai pengujian). Tidak menyentuh tabel DB. */
 export function resetAiRateLimits(): void {
   memoryStore = createMemoryStore();
