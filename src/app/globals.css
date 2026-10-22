@@ -181,11 +181,12 @@
   animation: var(--animate-shimmer);
 }
 
-@utility no-scrollbar {
+/* Hilangkan scrollbar pada elemen tertentu (mis. sidebar navigasi) */
+.no-scrollbar {
   scrollbar-width: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 @utility tabular {
