@@ -10,7 +10,7 @@ import {
 } from "@/lib/db/store";
 import { apiUser, badRequest, unauthorized } from "@/lib/server/api-auth";
 import { notifyUser } from "@/lib/server/notify";
-import { uid } from "@/lib/utils";
+import { randomString, uid } from "@/lib/utils";
 
 const schema = z.object({
   topicId: z.string().min(1),
@@ -26,10 +26,7 @@ const CERTIFICATE_MIN_SCORE = 70;
 /** Kode sertifikat publik yang mudah dibaca & diverifikasi. */
 function certificateCode(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let body = "";
-  for (let i = 0; i < 8; i++) {
-    body += alphabet[Math.floor(Math.random() * alphabet.length)];
-  }
+  const body = randomString(8, alphabet);
   return `VM-${body.slice(0, 4)}-${body.slice(4)}`;
 }
 

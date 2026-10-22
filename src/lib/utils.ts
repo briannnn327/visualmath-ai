@@ -19,6 +19,42 @@ export function initials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+/** Alfabet default untuk token acak. */
+const TOKEN_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+/**
+ * String acak kriptografis (Web Crypto) sepanjang `length` karakter.
+ * Memakai rejection sampling supaya tidak ada modulo bias.
+ */
+export function randomString(length: number, alphabet = TOKEN_ALPHABET): string {
+  if (length <= 0 || alphabet.length === 0) return "";
+  const limit = Math.floor(256 / alphabet.length) * alphabet.length;
+  const out: string[] = [];
+  const buf = new Uint8Array(length);
+  while (out.length < length) {
+    crypto.getRandomValues(buf);
+    for (const b of buf) {
+      if (b >= limit) continue;
+      out.push(alphabet[b % alphabet.length]);
+      if (out.length === length) break;
+    }
+  }
+  return out.join("");
+}
+
+/** Indeks acak kriptografis dalam rentang [0, maxExclusive). */
+export function randomInt(maxExclusive: number): number {
+  if (maxExclusive <= 1) return 0;
+  const limit = Math.floor(0x100000000 / maxExclusive) * maxExclusive;
+  const buf = new Uint32Array(1);
+  let value = buf[0];
+  do {
+    crypto.getRandomValues(buf);
+    value = buf[0];
+  } while (value >= limit);
+  return value % maxExclusive;
+}
+
 /** Warna avatar deterministik dari string. */
 export function avatarColor(seed: string): string {
   const palette = [
@@ -29,7 +65,9 @@ export function avatarColor(seed: string): string {
     "--color-warning",
   ];
   let hash = 0;
-  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = Math.trunc(hash * 31 + seed.charCodeAt(i));
+  }
   return palette[Math.abs(hash) % palette.length];
 }
 
@@ -52,10 +90,9 @@ export function formatDuration(seconds: number): string {
   return s > 0 ? `${m} mnt ${s} dtk` : `${m} mnt`;
 }
 
-/** ID unik sederhana (demo). */
+/** ID unik sederhana (demo) — memakai acak kriptografis, bukan `Math.random`. */
 export function uid(prefix = ""): string {
-  const rand = Math.random().toString(36).slice(2, 8);
-  return `${prefix}${Date.now().toString(36)}${rand}`;
+  return `${prefix}${Date.now().toString(36)}${randomString(6)}`;
 }
 
 /** Peta nama ikon topik (Material Symbols di seed) → set ikon lokal. */

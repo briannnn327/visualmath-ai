@@ -4,6 +4,7 @@ import { getTopicById, listQuestions } from "@/lib/db/store";
 import { difficultySchema } from "@/lib/schemas";
 import { apiUser, unauthorized } from "@/lib/server/api-auth";
 import type { Difficulty } from "@/lib/types";
+import { randomInt } from "@/lib/utils";
 
 const DIFF_ORDER: Difficulty[] = ["mudah", "sedang", "sulit"];
 
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const question = pool[Math.floor(Math.random() * pool.length)];
+  const question = pool[randomInt(pool.length)];
   const topic = await getTopicById(question.topicId);
   const { expectedAnswer: _ea, ...safeQuestion } = question;
 

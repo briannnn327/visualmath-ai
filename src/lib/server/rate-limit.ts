@@ -7,6 +7,8 @@
    (per-proses) agar endpoint AI tidak ikut gagal total.
    ========================================================= */
 
+import { randomString } from "@/lib/utils";
+
 export interface RateLimitRule {
   /** Jumlah maksimum permintaan dalam satu jendela. */
   limit: number;
@@ -128,7 +130,7 @@ export function createPostgresStore(db: RateLimitDb): RateLimitStore {
 
       await db.$executeRawUnsafe(
         'INSERT INTO "RateLimitHit" (id, bucket, "key", "createdAt") VALUES ($1, $2, $3, $4)',
-        `rl-${now}-${Math.random().toString(36).slice(2, 10)}`,
+        `rl-${now}-${randomString(10)}`,
         bucket,
         key,
         new Date(now),
