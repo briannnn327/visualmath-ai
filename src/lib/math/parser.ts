@@ -301,7 +301,7 @@ function applyFn(name: string, x: number): number {
     case "ceil":
       return Math.ceil(x);
     default:
-      return NaN;
+      return Number.NaN;
   }
 }
 
@@ -387,9 +387,9 @@ export function evaluateScope(node: MathNode, scope: Record<string, number>): nu
     case "num":
       return node.value;
     case "const":
-      return CONSTANTS[node.name] ?? NaN;
+      return CONSTANTS[node.name] ?? Number.NaN;
     case "var":
-      return scope[node.name] ?? NaN;
+      return scope[node.name] ?? Number.NaN;
     case "neg":
       return -evaluateScope(node.arg, scope);
     case "fn":
@@ -421,7 +421,7 @@ export function evaluate(node: MathNode, variableValue: number, varName: string)
 export function makeFunction(node: MathNode, varName: string): (x: number) => number {
   return (x: number) => {
     const v = evaluate(node, x, varName);
-    return Number.isFinite(v) ? v : NaN;
+    return Number.isFinite(v) ? v : Number.NaN;
   };
 }
 
@@ -433,7 +433,7 @@ export function makeFunction2D(
 ): (x: number, y: number) => number {
   return (x: number, y: number) => {
     const v = evaluateScope(node, { [varX]: x, [varY]: y });
-    return Number.isFinite(v) ? v : NaN;
+    return Number.isFinite(v) ? v : Number.NaN;
   };
 }
 
@@ -443,15 +443,15 @@ export function simpson(f: (x: number) => number, a: number, b: number, n = 1000
   let sum = 0;
   const evalSafe = (x: number): number => {
     const v = f(x);
-    return Number.isFinite(v) && Math.abs(v) < 1e7 ? v : NaN;
+    return Number.isFinite(v) && Math.abs(v) < 1e7 ? v : Number.NaN;
   };
   const f0 = evalSafe(a);
   const fn = evalSafe(b);
-  if (Number.isNaN(f0) || Number.isNaN(fn)) return NaN;
+  if (Number.isNaN(f0) || Number.isNaN(fn)) return Number.NaN;
   sum += f0 + fn;
   for (let i = 1; i < n; i++) {
     const v = evalSafe(a + i * h);
-    if (Number.isNaN(v)) return NaN;
+    if (Number.isNaN(v)) return Number.NaN;
     sum += (i % 2 === 0 ? 2 : 4) * v;
   }
   return (sum * h) / 3;
@@ -462,9 +462,9 @@ export function numericDerivative(f: (x: number) => number, x: number, h = 1e-5)
   const hm = x - h;
   const fp = f(hp);
   const fm = f(hm);
-  if (Number.isNaN(fp) || Number.isNaN(fm)) return NaN;
+  if (Number.isNaN(fp) || Number.isNaN(fm)) return Number.NaN;
   const d = (fp - fm) / (2 * h);
-  return Number.isFinite(d) ? d : NaN;
+  return Number.isFinite(d) ? d : Number.NaN;
 }
 
 /* ----------------------------- Simbolik: turunan ----------------------------- */
@@ -1212,9 +1212,9 @@ export function analyzeMultivariableExpression(
         if (z < zMin) zMin = z;
         if (z > zMax) zMax = z;
       } else {
-        z = NaN;
+        z = Number.NaN;
       }
-      row.push(Number.isNaN(z) ? NaN : Math.round(z * 1000) / 1000);
+      row.push(Number.isNaN(z) ? Number.NaN : Math.round(z * 1000) / 1000);
     }
     values.push(row);
   }
