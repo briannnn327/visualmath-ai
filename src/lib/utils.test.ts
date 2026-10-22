@@ -51,9 +51,7 @@ describe("utils — avatarColor", () => {
       "--color-info",
       "--color-warning",
     ];
-    expect(avatarColor("budi.santoso@kampus.id")).toBe(
-      avatarColor("budi.santoso@kampus.id"),
-    );
+    expect(avatarColor("budi.santoso@kampus.id")).toBe(avatarColor("budi.santoso@kampus.id"));
     expect(palette).toContain(avatarColor("budi.santoso@kampus.id"));
   });
 });
