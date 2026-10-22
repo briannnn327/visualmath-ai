@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/brand";
 import type { NavItem } from "@/components/layout/nav";
+import { NotificationBell } from "@/components/notification-bell";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { roleLabel } from "@/lib/schemas";
@@ -199,6 +200,7 @@ export function AppShell({
             {title}
           </h1>
           <div className="ml-auto flex items-center gap-2">
+            <NotificationBell />
             <span className="hidden items-center gap-1.5 rounded-full bg-surface-container px-3 py-1 text-xs font-semibold text-on-surface-variant sm:inline-flex">
               <Icon name="sparkle" size={14} className="text-primary" />
               {roleLabel[user.role]}
