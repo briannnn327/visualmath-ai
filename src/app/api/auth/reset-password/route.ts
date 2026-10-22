@@ -4,6 +4,7 @@ import {
   getUserById,
   markPasswordResetUsed,
   recordActivity,
+  revokeSessionsForUser,
   updateUserPassword,
 } from "@/lib/db/store";
 import { type ResetPasswordInput, resetPasswordSchema } from "@/lib/schemas";
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
 
   await updateUserPassword(user.id, hashPassword(input.password));
   await markPasswordResetUsed(record.id);
+  await revokeSessionsForUser(user.id);
 
   await recordActivity({
     userId: user.id,

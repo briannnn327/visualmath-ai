@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createPasswordReset, findUserByEmail, recordActivity } from "@/lib/db/store";
 import { type ForgotPasswordInput, forgotPasswordSchema } from "@/lib/schemas";
 import { badRequest } from "@/lib/server/api-auth";
+import { appBaseUrl, passwordResetEmail, sendEmail } from "@/lib/server/email";
 import { generateResetToken, hashResetToken } from "@/lib/server/password";
 import { uid } from "@/lib/utils";
 
@@ -56,11 +57,18 @@ export async function POST(request: Request) {
     severity: "info",
   });
 
+  const resetUrl = `${appBaseUrl()}/reset-password?token=${token}`;
+  const emailResult = await sendEmail({
+    to: user.email,
+    ...passwordResetEmail(resetUrl, user.name),
+  });
+
   const showToken =
     process.env.VMA_RESET_SHOW_TOKEN === "true" || process.env.NODE_ENV !== "production";
 
   return NextResponse.json({
     message: genericMessage,
+    emailDelivered: emailResult.delivered,
     expiresAt: expiresAt.toISOString(),
     ...(showToken ? { token, resetPath: `/reset-password?token=${token}` } : {}),
   });

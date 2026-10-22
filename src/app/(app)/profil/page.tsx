@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
+import { SessionManager } from "@/components/session-manager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -236,6 +237,8 @@ export default function ProfilPage() {
           </form>
         </CardContent>
       </Card>
+
+      <SessionManager />
     </div>
   );
 }

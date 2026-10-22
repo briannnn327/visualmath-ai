@@ -1,9 +1,17 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/db/session";
+import { getSessionOptimistic } from "@/lib/db/session";
 import type { Role } from "@/lib/types";
 
-const STUDENT_PATHS = ["/dashboard", "/ai-explainer", "/grafik", "/latihan", "/riwayat", "/profil"];
+const STUDENT_PATHS = [
+  "/dashboard",
+  "/ai-explainer",
+  "/grafik",
+  "/latihan",
+  "/riwayat",
+  "/profil",
+  "/sertifikat",
+];
 const GUEST_ONLY = ["/login", "/register"];
 const DOSEN_PATHS = ["/dosen"];
 const ADMIN_PATHS = ["/admin"];
@@ -15,7 +23,7 @@ function homeFor(role: Role): string {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("vma_session")?.value;
-  const session = await getSession(token);
+  const session = await getSessionOptimistic(token);
   const role = session?.role;
 
   const isStudentRoute = STUDENT_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

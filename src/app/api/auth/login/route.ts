@@ -28,6 +28,8 @@ export async function POST(request: Request) {
     role: user.role,
     name: user.name,
     email: user.email,
+    userAgent: request.headers.get("user-agent"),
+    ip: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
   });
 
   await recordActivity({

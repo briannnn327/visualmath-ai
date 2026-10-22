@@ -5,6 +5,7 @@ import {
   listHistory,
   listProgress,
   recordActivity,
+  revokeSessionsForUser,
   updateUser,
 } from "@/lib/db/store";
 import { type ProfileInput, parseBody, profileSchema } from "@/lib/schemas";
@@ -60,6 +61,8 @@ export async function PATCH(request: NextRequest) {
   };
   if (input.password) updateData.password = hashPassword(input.password);
   const updated = await updateUser(user.id, updateData);
+
+  if (input.password) await revokeSessionsForUser(user.id);
 
   await recordActivity({
     userId: user.id,

@@ -1,11 +1,17 @@
 /* =========================================================
-   Sesi autentikasi stateless berbasis JWT (jose, HS256).
-   - createSession(): menandatangani token + info sesi
-   - getSession(): verifikasi token (async, dipakai proxy & route)
-   - destroySession(): stateless — cukup hapus cookie di klien
+   Sesi autentikasi JWT (jose, HS256) dengan pencabutan (revocable).
+
+   - createSession(): tanda tangani token (jti = id baris Session) + simpan
+     baris Session di DB agar dapat dicabut kapan saja.
+   - getSession(): verifikasi token, lalu cek baris Session masih aktif
+     (belum dicabut & belum kedaluwarsa).
+   - destroySession(): cabut baris Session (revoke) sehingga token langsung
+     tidak berlaku walau JWT-nya masih valid secara kriptografis.
    ========================================================= */
 import { jwtVerify, SignJWT } from "jose";
+import { createSessionRecord, getActiveSession, revokeSession } from "@/lib/db/store";
 import type { Role, SessionInfo, UserId } from "@/lib/types";
+import { uid } from "@/lib/utils";
 
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 hari
 
@@ -22,14 +28,27 @@ export async function createSession(input: {
   role: Role;
   name: string;
   email: string;
+  userAgent?: string | null;
+  ip?: string | null;
 }): Promise<{ token: string; session: SessionInfo }> {
+  const expires = Date.now() + SESSION_TTL_SECONDS * 1000;
+  const jti = uid("sess-");
+
   const session: SessionInfo = {
     userId: input.id,
     role: input.role,
     name: input.name,
     email: input.email,
-    expires: Date.now() + SESSION_TTL_SECONDS * 1000,
+    expires,
   };
+
+  await createSessionRecord({
+    id: jti,
+    userId: input.id,
+    userAgent: input.userAgent ?? null,
+    ip: input.ip ?? null,
+    expiresAt: new Date(expires),
+  });
 
   const token = await new SignJWT({
     role: input.role,
@@ -38,6 +57,7 @@ export async function createSession(input: {
   })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(String(input.id))
+    .setJti(jti)
     .setIssuedAt()
     .setExpirationTime(`${SESSION_TTL_SECONDS}s`)
     .sign(getSecret());
@@ -50,21 +70,66 @@ export async function getSession(token: string | undefined): Promise<SessionInfo
   try {
     const { payload } = await jwtVerify(token, getSecret(), { algorithms: ["HS256"] });
     const sub = payload.sub;
-    if (!sub) return undefined;
-    const expires = typeof payload.exp === "number" ? payload.exp * 1000 : Date.now() + 1;
+    const jti = payload.jti;
+    if (!sub || !jti) return undefined;
+
+    /* Token lama (sebelum fitur revocable) tanpa jti dianggap tidak valid. */
+    const active = await getActiveSession(jti);
+    if (!active || active.userId !== sub) return undefined;
+
     return {
       userId: sub as UserId,
       role: payload.role as Role,
       name: String(payload.name ?? ""),
       email: String(payload.email ?? ""),
-      expires,
+      expires: active.expiresAt.getTime(),
+      sessionId: jti,
     };
   } catch {
     return undefined;
   }
 }
 
-/* Stateless: logout hanya menghapus cookie di sisi klien. */
-export function destroySession(_token?: string): void {
-  return;
+/**
+ * Verifikasi token sesi secara optimistik (in-memory) untuk Next.js Proxy/Middleware.
+ * Memvalidasi tanda tangan kriptografis, masa berlaku (exp), klaim pengguna (sub, role),
+ * dan keberadaan identifier sesi (jti) tanpa query database (0ms I/O DB).
+ *
+ * Validasi pencabutan sesi di database (revocable session) tetap ditegakkan secara
+ * penuh di lapisan Server Component dan API Route Handler via getSession().
+ */
+export async function getSessionOptimistic(
+  token: string | undefined,
+): Promise<SessionInfo | undefined> {
+  if (!token) return undefined;
+  try {
+    const { payload } = await jwtVerify(token, getSecret(), { algorithms: ["HS256"] });
+    const sub = payload.sub;
+    const jti = payload.jti;
+    if (!sub || !jti) return undefined;
+
+    const expires = typeof payload.exp === "number" ? payload.exp * 1000 : Date.now() + 1;
+
+    return {
+      userId: sub as UserId,
+      role: payload.role as Role,
+      name: String(payload.name ?? ""),
+      email: String(payload.email ?? ""),
+      expires,
+      sessionId: jti,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/** Cabut sesi ini di server sehingga token tidak dapat dipakai lagi. */
+export async function destroySession(token?: string): Promise<void> {
+  if (!token) return;
+  try {
+    const { payload } = await jwtVerify(token, getSecret(), { algorithms: ["HS256"] });
+    if (payload.jti) await revokeSession(payload.jti);
+  } catch {
+    /* Token tidak valid/kedaluwarsa — tak ada yang perlu dicabut. */
+  }
 }

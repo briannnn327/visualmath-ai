@@ -6,6 +6,7 @@ vi.mock("@/lib/db/store", () => ({
   markPasswordResetUsed: vi.fn(async () => undefined),
   updateUserPassword: vi.fn(async () => undefined),
   recordActivity: vi.fn(async () => ({})),
+  revokeSessionsForUser: vi.fn(async () => 1),
 }));
 
 import {
