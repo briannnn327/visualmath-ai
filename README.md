@@ -94,6 +94,10 @@ gh secret set SONAR_HOST_URL -v "https://sonarcloud.io"   # opsional, sudah ada 
 Project key & organisasi ditentukan di `sonar-project.properties` (`sonar.projectKey`, `sonar.organization`).
 Kode hasil `prisma generate` (`src/generated/prisma`) sudah dikecualikan agar tidak mengotori metrik.
 
+> **Automatic Analysis sudah dimatikan** di project SonarCloud — analisis dijalankan oleh job `sonar-scan` di CI.
+> Alasannya: SonarCloud menolak CI analysis kalau Automatic Analysis masih aktif, dan hanya CI yang bisa mengirim
+> laporan coverage (`coverage/lcov.info`) karena harus menjalankan test lebih dulu.
+
 ## Struktur singkat
 
 ```
