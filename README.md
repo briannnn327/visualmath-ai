@@ -98,6 +98,9 @@ Kode hasil `prisma generate` (`src/generated/prisma`) sudah dikecualikan agar ti
 > Alasannya: SonarCloud menolak CI analysis kalau Automatic Analysis masih aktif, dan hanya CI yang bisa mengirim
 > laporan coverage (`coverage/lcov.info`) karena harus menjalankan test lebih dulu.
 
+Ringkasan aturan yang sengaja ditunda (won't fix) beserta alasannya ada di
+[`docs/sonar-quality.md`](docs/sonar-quality.md).
+
 ## Struktur singkat
 
 ```
