@@ -74,6 +74,9 @@ model User {
   materials     MaterialItem[]  @relation("MaterialAuthor")
   formulas      FormulaRecord[]
   passwordResets PasswordResetToken[]
+  sessions      Session[]
+  notifications Notification[]
+  certificates  Certificate[]
 }
 
 model Kelas {
@@ -229,4 +232,58 @@ model RateLimitHit {
   createdAt DateTime @default(now())
 
   @@index([bucket, key, createdAt])
+}
+
+/** Sesi login yang dapat dicabut (revocable) — token JWT menunjuk baris ini via jti. */
+model Session {
+  id        String    @id
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent String?
+  ip        String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+enum NotificationKind {
+  info
+  success
+  warning
+  error
+}
+
+/** Notifikasi in-app untuk pengguna. */
+model Notification {
+  id        String           @id
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      NotificationKind @default(info)
+  title     String
+  body      String
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, readAt])
+}
+
+/** Sertifikat pencapaian setelah menuntaskan kuis adaptif. */
+model Certificate {
+  id          String   @id
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicId     String
+  topicTitle  String
+  score       Int
+  xp          Int
+  recipientName String
+  identity    String?
+  code        String   @unique
+  issuedAt    DateTime @default(now())
+
+  @@index([userId])
 }
