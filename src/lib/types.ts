@@ -45,6 +45,8 @@ export interface SessionInfo {
   name: string;
   email: string;
   expires: number;
+  /** ID baris Session (jti) — dipakai untuk mencabut sesi. */
+  sessionId?: string;
 }
 
 export interface Kelas {
@@ -201,6 +203,36 @@ export interface FormulaAnalysis {
   keyPoints?: string[];
   /** Materi kuliah (RAG) yang dipakai sebagai referensi penjelasan. */
   references?: RagCitation[];
+}
+
+export interface MultivariableAnalysis {
+  source: string;
+  normalized: string;
+  pretty: string;
+  varX: string;
+  varY: string;
+  variables: string[];
+  partialX: {
+    pretty: string;
+    steps: DerivativeStep[];
+  };
+  partialY: {
+    pretty: string;
+    steps: DerivativeStep[];
+  };
+  gradientPretty: string;
+  secondPartialXX: string;
+  secondPartialYY: string;
+  secondPartialXY: string;
+  hessianDeterminant: string;
+  grid: {
+    xRange: [number, number];
+    yRange: [number, number];
+    zRange: [number, number];
+    xSteps: number[];
+    ySteps: number[];
+    values: number[][];
+  };
 }
 
 /** Sumber materi (hasil retrieval pgvector) yang dipakai sebagai referensi AI. */

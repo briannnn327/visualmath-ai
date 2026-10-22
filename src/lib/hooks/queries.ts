@@ -570,3 +570,81 @@ export function useRateLimits() {
     refetchInterval: 60_000,
   });
 }
+
+/* ---------- Notifikasi (in-app) ---------- */
+
+export interface NotificationItem {
+  id: string;
+  kind: "info" | "success" | "warning" | "error";
+  title: string;
+  body: string;
+  href: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
+export function useNotifications() {
+  return useQuery({
+    queryKey: ["notifications"],
+    queryFn: async () => {
+      const data = await api.get<{ notifications: NotificationItem[]; unread: number }>(
+        "/api/notifications",
+      );
+      return data;
+    },
+    refetchInterval: 60_000,
+  });
+}
+
+export function useMarkNotificationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id?: string; all?: boolean }) =>
+      api.patch<{ ok: boolean }>("/api/notifications", input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+}
+
+export function useDeleteNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.del<{ ok: boolean }>("/api/notifications", { id }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+}
+
+/* ---------- Sesi (revocable) ---------- */
+
+export interface SessionListItem {
+  id: string;
+  userAgent: string | null;
+  ip: string | null;
+  createdAt: string;
+  expiresAt: string;
+  current: boolean;
+}
+
+export function useSessions() {
+  return useQuery({
+    queryKey: ["sessions"],
+    queryFn: async () => {
+      const { sessions } = await api.get<{ sessions: SessionListItem[] }>("/api/sessions");
+      return sessions;
+    },
+  });
+}
+
+export function useRevokeSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id?: string; all?: boolean }) =>
+      api.del<{ ok: boolean }>("/api/sessions", input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["sessions"] });
+    },
+  });
+}

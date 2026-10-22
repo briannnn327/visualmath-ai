@@ -156,6 +156,211 @@ export async function deletePasswordResetsForUser(userId: string): Promise<void>
   await prisma.passwordResetToken.deleteMany({ where: { userId } });
 }
 
+/* ---------- Sesi (revocable) ---------- */
+
+export interface SessionRecord {
+  id: string;
+  userId: string;
+  userAgent: string | null;
+  ip: string | null;
+  expiresAt: Date;
+  revokedAt: Date | null;
+  createdAt: Date;
+}
+
+export async function createSessionRecord(data: {
+  id: string;
+  userId: string;
+  userAgent?: string | null;
+  ip?: string | null;
+  expiresAt: Date;
+}): Promise<void> {
+  await prisma.session.create({
+    data: {
+      id: data.id,
+      userId: data.userId,
+      userAgent: data.userAgent ?? null,
+      ip: data.ip ?? null,
+      expiresAt: data.expiresAt,
+    },
+  });
+}
+
+/** Ambil sesi aktif; mengembalikan null bila tidak ada, sudah dicabut, atau kedaluwarsa. */
+export async function getActiveSession(id: string): Promise<SessionRecord | null> {
+  const row = await prisma.session.findUnique({ where: { id } });
+  if (!row) return null;
+  if (row.revokedAt) return null;
+  if (row.expiresAt.getTime() <= Date.now()) return null;
+  return row;
+}
+
+export async function revokeSession(id: string): Promise<void> {
+  await prisma.session.updateMany({
+    where: { id, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+}
+
+/** Cabut seluruh sesi aktif seorang pengguna (mis. setelah ganti kata sandi). */
+export async function revokeSessionsForUser(userId: string): Promise<number> {
+  const res = await prisma.session.updateMany({
+    where: { userId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  return res.count;
+}
+
+export async function listSessionsForUser(userId: string): Promise<SessionRecord[]> {
+  return prisma.session.findMany({ where: { userId }, orderBy: { createdAt: "desc" } });
+}
+
+export async function listAllActiveSessions(): Promise<SessionRecord[]> {
+  return prisma.session.findMany({
+    where: { revokedAt: null, expiresAt: { gt: new Date() } },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/** Hapus sesi kedaluwarsa/dicabut lama (pemeliharaan). */
+export async function pruneSessions(): Promise<number> {
+  const res = await prisma.session.deleteMany({
+    where: {
+      OR: [
+        { expiresAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+        { revokedAt: { not: null } },
+      ],
+    },
+  });
+  return res.count;
+}
+
+/* ---------- Notifikasi (in-app) ---------- */
+
+export interface NotificationRecord {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  href: string | null;
+  readAt: Date | null;
+  createdAt: Date;
+}
+
+export async function createNotification(data: {
+  id: string;
+  userId: string;
+  kind?: "info" | "success" | "warning" | "error";
+  title: string;
+  body: string;
+  href?: string | null;
+}): Promise<void> {
+  await prisma.notification.create({
+    data: {
+      id: data.id,
+      userId: data.userId,
+      kind: data.kind ?? "info",
+      title: data.title,
+      body: data.body,
+      href: data.href ?? null,
+    },
+  });
+}
+
+export async function listNotifications(userId: string, limit = 30): Promise<NotificationRecord[]> {
+  return prisma.notification.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}
+
+export async function countUnreadNotifications(userId: string): Promise<number> {
+  return prisma.notification.count({ where: { userId, readAt: null } });
+}
+
+export async function markNotificationRead(userId: string, id: string): Promise<void> {
+  await prisma.notification.updateMany({
+    where: { id, userId, readAt: null },
+    data: { readAt: new Date() },
+  });
+}
+
+export async function markAllNotificationsRead(userId: string): Promise<number> {
+  const res = await prisma.notification.updateMany({
+    where: { userId, readAt: null },
+    data: { readAt: new Date() },
+  });
+  return res.count;
+}
+
+export async function deleteNotification(userId: string, id: string): Promise<void> {
+  await prisma.notification.deleteMany({ where: { id, userId } });
+}
+
+/* ---------- Sertifikat ---------- */
+
+export interface CertificateRecord {
+  id: string;
+  userId: string;
+  topicId: string;
+  topicTitle: string;
+  score: number;
+  xp: number;
+  recipientName: string;
+  identity: string | null;
+  code: string;
+  issuedAt: Date;
+}
+
+export async function createCertificate(data: {
+  id: string;
+  userId: string;
+  topicId: string;
+  topicTitle: string;
+  score: number;
+  xp: number;
+  recipientName: string;
+  identity?: string | null;
+  code: string;
+}): Promise<CertificateRecord> {
+  return prisma.certificate.create({
+    data: {
+      id: data.id,
+      userId: data.userId,
+      topicId: data.topicId,
+      topicTitle: data.topicTitle,
+      score: data.score,
+      xp: data.xp,
+      recipientName: data.recipientName,
+      identity: data.identity ?? null,
+      code: data.code,
+    },
+  });
+}
+
+export async function getCertificateById(id: string): Promise<CertificateRecord | null> {
+  return prisma.certificate.findUnique({ where: { id } });
+}
+
+export async function listCertificatesForUser(userId: string): Promise<CertificateRecord[]> {
+  return prisma.certificate.findMany({
+    where: { userId },
+    orderBy: { issuedAt: "desc" },
+  });
+}
+
+/** Sertifikat terbaru untuk (user, topik) — dipakai mencegah duplikat per topik. */
+export async function findCertificateForTopic(
+  userId: string,
+  topicId: string,
+): Promise<CertificateRecord | null> {
+  return prisma.certificate.findFirst({
+    where: { userId, topicId },
+    orderBy: { issuedAt: "desc" },
+  });
+}
+
 /* ---------- Topics ---------- */
 export async function listTopics(): Promise<Topic[]> {
   const rows = await prisma.topic.findMany({ orderBy: { order: "asc" } });
