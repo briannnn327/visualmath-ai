@@ -248,6 +248,43 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Sertifikat */}
+      {data.certificates.length > 0 && (
+        <Card>
+          <CardHeader className="flex-row items-center justify-between">
+            <div>
+              <CardTitle>Sertifikat Terbaru</CardTitle>
+              <CardDescription>Pencapaian kuis adaptifmu.</CardDescription>
+            </div>
+            <Link href="/sertifikat">
+              <Button variant="ghost" size="sm">
+                Lihat semua
+                <Icon name="arrow-right" size={14} />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent className="grid gap-3 pt-5 sm:grid-cols-3">
+            {data.certificates.map((c) => (
+              <Link
+                key={c.id}
+                href={`/sertifikat/${c.id}`}
+                className="flex items-start gap-3 rounded-2xl border border-outline-variant bg-surface p-3.5 transition-colors hover:border-primary/40"
+              >
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-warning-container text-on-warning-container">
+                  <Icon name="award" size={18} />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-on-surface">{c.topicTitle}</p>
+                  <p className="text-xs text-on-surface-variant">
+                    Skor {c.score}/100 · {c.code}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

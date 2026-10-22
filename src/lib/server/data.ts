@@ -7,6 +7,7 @@ import { getSession } from "@/lib/db/session";
 import {
   getKelasById,
   getUserById,
+  listCertificatesForUser,
   listHistory,
   listHistoryByUser,
   listKelas,
@@ -63,14 +64,22 @@ export interface StudentDashboardLite {
   recommendation: StudentDashboardData["recommendation"];
   kelasName?: string;
   classRank?: number;
+  certificates: Array<{
+    id: string;
+    topicTitle: string;
+    score: number;
+    code: string;
+    issuedAt: string;
+  }>;
 }
 
 export async function getStudentData(userId: string): Promise<StudentDashboardLite> {
-  const [topics, allProgress, allHistory, user] = await Promise.all([
+  const [topics, allProgress, allHistory, user, certificates] = await Promise.all([
     listTopics(),
     listProgress(),
     listHistory(),
     getUserById(userId),
+    listCertificatesForUser(userId),
   ]);
 
   const rows: Array<{ topic: Topic; progress: Progress }> = topics.map((topic) => {
@@ -168,6 +177,13 @@ export async function getStudentData(userId: string): Promise<StudentDashboardLi
     recommendation,
     kelasName,
     classRank,
+    certificates: certificates.slice(0, 3).map((c) => ({
+      id: c.id,
+      topicTitle: c.topicTitle,
+      score: c.score,
+      code: c.code,
+      issuedAt: c.issuedAt.toISOString(),
+    })),
   };
 }
 

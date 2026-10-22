@@ -88,6 +88,7 @@ const ACTION_LABELS: Record<string, string> = {
   "class.update": "Edit Kelas",
   "class.delete": "Hapus Kelas",
   "class.join": "Gabung Kelas",
+  "certificate.issue": "Terbit Sertifikat",
 };
 
 function actionLabel(action: string): string {
