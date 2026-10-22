@@ -84,18 +84,15 @@ jobs:
         run: npm run test:coverage
 
       - name: Cek status Automatic Analysis
-        id: autoscan
         if: env.SONAR_TOKEN != ''
         run: |
           KEY=$(grep -E '^sonar\.projectKey=' sonar-project.properties | cut -d= -f2 | tr -d '\r')
           VALUE=$(curl -sS -H "Authorization: Bearer $SONAR_TOKEN" \
             "$SONAR_HOST_URL/api/settings/values?component=$KEY" \
             | jq -r '.settings[]? | select(.key=="sonar.autoscan.enabled") | .value' | head -n1)
-          echo "enabled=${VALUE:-unknown}" >> "$GITHUB_OUTPUT"
-          echo "::notice title=SonarQube::sonar.autoscan.enabled untuk $KEY = ${VALUE:-unknown}"
+          echo "::notice title=SonarQube::sonar.autoscan.enabled (default instance) untuk $KEY = ${VALUE:-unknown}. Scan CI tetap dijalankan; matikan Automatic Analysis di dashboard SonarCloud bila muncul konflik."
 
       - name: SonarQube Cloud Scan
-        # Lewati bila token kosong, atau Automatic Analysis masih menyala
-        # (SonarCloud menolak CI analysis kalau project punya Automatic Analysis aktif).
-        if: env.SONAR_TOKEN != '' && steps.autoscan.outputs.enabled != 'true'
+        # Lewati hanya bila SONAR_TOKEN belum di-set.
+        if: env.SONAR_TOKEN != ''
         uses: sonarsource/sonarqube-scan-action@v8
