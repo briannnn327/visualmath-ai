@@ -172,10 +172,14 @@ class Parser {
       );
   }
 
-  parse(): MathNode {
+  get allVariables(): Set<string> {
+    return this.variables;
+  }
+
+  parse(options?: { allowMultiVar?: boolean }): MathNode {
     const node = this.parseExpr();
     this.expectEnd();
-    if (this.variables.size > 1) {
+    if (!options?.allowMultiVar && this.variables.size > 1) {
       const [first, second] = [...this.variables];
       throw new ParseError(
         `Ditemukan lebih dari satu variabel (${first}, ${second}). Engine ini mendukung 1 variabel saja.`,
@@ -301,21 +305,98 @@ function applyFn(name: string, x: number): number {
   }
 }
 
-export function evaluate(node: MathNode, variableValue: number, varName: string): number {
+/* ----------------------------- Penyederhanaan Aljabar ----------------------------- */
+
+function simplifyOnce(node: MathNode): MathNode {
+  switch (node.kind) {
+    case "num":
+    case "const":
+    case "var":
+      return node;
+    case "neg": {
+      const a = simplifyOnce(node.arg);
+      if (a.kind === "num") return { kind: "num", value: -a.value };
+      if (a.kind === "neg") return a.arg;
+      return { kind: "neg", arg: a };
+    }
+    case "fn":
+      return { kind: "fn", name: node.name, arg: simplifyOnce(node.arg) };
+    case "bin": {
+      const l = simplifyOnce(node.left);
+      const r = simplifyOnce(node.right);
+
+      // Constant folding
+      if (l.kind === "num" && r.kind === "num") {
+        switch (node.op) {
+          case "+":
+            return { kind: "num", value: l.value + r.value };
+          case "-":
+            return { kind: "num", value: l.value - r.value };
+          case "*":
+            return { kind: "num", value: l.value * r.value };
+          case "/":
+            return r.value !== 0
+              ? { kind: "num", value: l.value / r.value }
+              : { kind: "bin", op: "/", left: l, right: r };
+          case "^":
+            return { kind: "num", value: l.value ** r.value };
+        }
+      }
+
+      // Aturan penjumlahan & pengurangan identitas nol
+      if (node.op === "+") {
+        if (l.kind === "num" && l.value === 0) return r;
+        if (r.kind === "num" && r.value === 0) return l;
+      }
+      if (node.op === "-") {
+        if (r.kind === "num" && r.value === 0) return l;
+        if (l.kind === "num" && l.value === 0) return { kind: "neg", arg: r };
+      }
+
+      // Aturan perkalian identitas & nol
+      if (node.op === "*") {
+        if ((l.kind === "num" && l.value === 0) || (r.kind === "num" && r.value === 0)) {
+          return { kind: "num", value: 0 };
+        }
+        if (l.kind === "num" && l.value === 1) return r;
+        if (r.kind === "num" && r.value === 1) return l;
+      }
+
+      // Aturan pangkat nol & satu
+      if (node.op === "^") {
+        if (r.kind === "num" && r.value === 0) return { kind: "num", value: 1 };
+        if (r.kind === "num" && r.value === 1) return l;
+      }
+
+      return { kind: "bin", op: node.op, left: l, right: r };
+    }
+  }
+}
+
+export function simplify(node: MathNode): MathNode {
+  let curr = node;
+  for (let i = 0; i < 4; i++) {
+    const next = simplifyOnce(curr);
+    curr = next;
+  }
+  return curr;
+}
+
+export function evaluateScope(node: MathNode, scope: Record<string, number>): number {
   switch (node.kind) {
     case "num":
       return node.value;
     case "const":
       return CONSTANTS[node.name] ?? NaN;
     case "var":
-      return node.name === varName ? variableValue : NaN;
+      return scope[node.name] ?? NaN;
     case "neg":
-      return -evaluate(node.arg, variableValue, varName);
+      return -evaluateScope(node.arg, scope);
     case "fn":
-      return applyFn(node.name, evaluate(node.arg, variableValue, varName));
+      return applyFn(node.name, evaluateScope(node.arg, scope));
     case "bin": {
-      const l = evaluate(node.left, variableValue, varName);
-      const r = evaluate(node.right, variableValue, varName);
+      const l = evaluateScope(node.left, scope);
+      const r = evaluateScope(node.right, scope);
       switch (node.op) {
         case "+":
           return l + r;
@@ -332,10 +413,26 @@ export function evaluate(node: MathNode, variableValue: number, varName: string)
   }
 }
 
+export function evaluate(node: MathNode, variableValue: number, varName: string): number {
+  return evaluateScope(node, { [varName]: variableValue });
+}
+
 /** Buat closure fungsi numerik aman. NaN/infinity untuk di luar domain. */
 export function makeFunction(node: MathNode, varName: string): (x: number) => number {
   return (x: number) => {
     const v = evaluate(node, x, varName);
+    return Number.isFinite(v) ? v : NaN;
+  };
+}
+
+/** Buat closure fungsi 2 variabel f(x, y) numerik aman untuk multivariabel. */
+export function makeFunction2D(
+  node: MathNode,
+  varX = "x",
+  varY = "y",
+): (x: number, y: number) => number {
+  return (x: number, y: number) => {
+    const v = evaluateScope(node, { [varX]: x, [varY]: y });
     return Number.isFinite(v) ? v : NaN;
   };
 }
@@ -682,7 +779,7 @@ function diffWithSteps(node: MathNode, varName: string, steps: DerivativeStep[])
             ? "Laju perubahan variabel terhadap dirinya sendiri adalah 1."
             : "Variabel lain diperlakukan sebagai konstanta pada turunan parsial.",
       });
-      return { kind: "num", value: 1 };
+      return { kind: "num", value: node.name === varName ? 1 : 0 };
     }
     case "neg": {
       const d = diffWithSteps(node.arg, varName, steps);
@@ -1002,6 +1099,162 @@ export function analyzeExpression(raw: string, expectedVariable = "x"): Analysis
       rulesUsed: steps.rulesUsed,
       explanation,
       variable,
+    },
+  };
+}
+
+export interface MultivariableAnalysisResult {
+  source: string;
+  normalized: string;
+  pretty: string;
+  varX: string;
+  varY: string;
+  variables: string[];
+  partialX: {
+    node: MathNode | null;
+    pretty: string;
+    steps: DerivativeStep[];
+  };
+  partialY: {
+    node: MathNode | null;
+    pretty: string;
+    steps: DerivativeStep[];
+  };
+  gradientPretty: string;
+  secondPartialXX: string;
+  secondPartialYY: string;
+  secondPartialXY: string;
+  hessianDeterminant: string;
+  grid: {
+    xRange: [number, number];
+    yRange: [number, number];
+    zRange: [number, number];
+    xSteps: number[];
+    ySteps: number[];
+    values: number[][];
+  };
+}
+
+export function analyzeMultivariableExpression(
+  raw: string,
+  expectedVarX = "x",
+  expectedVarY = "y",
+  domain: [number, number] = [-3, 3],
+  resolution = 25,
+): MultivariableAnalysisResult {
+  const src = preprocess(raw);
+  const tokens = insertImplicitMult(tokenize(src));
+  const parser = new Parser(tokens, expectedVarX);
+  const root = parser.parse({ allowMultiVar: true });
+
+  const allVars = [...parser.allVariables];
+  const vX = allVars.includes(expectedVarX) ? expectedVarX : (allVars[0] ?? expectedVarX);
+  const vY = allVars.includes(expectedVarY)
+    ? expectedVarY
+    : (allVars.find((v) => v !== vX) ?? expectedVarY);
+
+  const f2d = makeFunction2D(root, vX, vY);
+
+  const pXRaw = diff(root, vX);
+  const pYRaw = diff(root, vY);
+  const pXNode = pXRaw ? simplify(pXRaw) : null;
+  const pYNode = pYRaw ? simplify(pYRaw) : null;
+
+  const stepsX = generateSteps(root, vX);
+  const stepsY = generateSteps(root, vY);
+
+  const pXXRaw = pXNode ? diff(pXNode, vX) : null;
+  const pYYRaw = pYNode ? diff(pYNode, vY) : null;
+  const pXYRaw = pXNode ? diff(pXNode, vY) : null;
+
+  const pXXNode = pXXRaw ? simplify(pXXRaw) : null;
+  const pYYNode = pYYRaw ? simplify(pYYRaw) : null;
+  const pXYNode = pXYRaw ? simplify(pXYRaw) : null;
+
+  const pXPretty = pXNode ? pretty(pXNode) : "0";
+  const pYPretty = pYNode ? pretty(pYNode) : "0";
+  const pXXPretty = pXXNode ? pretty(pXXNode) : "0";
+  const pYYPretty = pYYNode ? pretty(pYYNode) : "0";
+  const pXYPretty = pXYNode ? pretty(pXYNode) : "0";
+
+  const gradientPretty = `∇f(${vX}, ${vY}) = (${pXPretty}) i + (${pYPretty}) j`;
+  const hessianDeterminant = `D = (${pXXPretty})(${pYYPretty}) - (${pXYPretty})²`;
+
+  const xMin = domain[0];
+  const xMax = domain[1];
+  const yMin = domain[0];
+  const yMax = domain[1];
+  const stepX = (xMax - xMin) / (resolution - 1);
+  const stepY = (yMax - yMin) / (resolution - 1);
+
+  const xSteps: number[] = [];
+  for (let i = 0; i < resolution; i++) {
+    xSteps.push(Math.round((xMin + i * stepX) * 100) / 100);
+  }
+  const ySteps: number[] = [];
+  for (let j = 0; j < resolution; j++) {
+    ySteps.push(Math.round((yMin + j * stepY) * 100) / 100);
+  }
+
+  let zMin = Infinity;
+  let zMax = -Infinity;
+  const values: number[][] = [];
+
+  for (let j = 0; j < resolution; j++) {
+    const row: number[] = [];
+    const yVal = yMin + j * stepY;
+    for (let i = 0; i < resolution; i++) {
+      const xVal = xMin + i * stepX;
+      let z = f2d(xVal, yVal);
+      if (Number.isFinite(z)) {
+        if (z > 40) z = 40;
+        if (z < -40) z = -40;
+        if (z < zMin) zMin = z;
+        if (z > zMax) zMax = z;
+      } else {
+        z = NaN;
+      }
+      row.push(Number.isNaN(z) ? NaN : Math.round(z * 1000) / 1000);
+    }
+    values.push(row);
+  }
+
+  if (!Number.isFinite(zMin)) zMin = -1;
+  if (!Number.isFinite(zMax)) zMax = 1;
+  if (zMin === zMax) {
+    zMin -= 1;
+    zMax += 1;
+  }
+
+  return {
+    source: raw,
+    normalized: src,
+    pretty: pretty(root),
+    varX: vX,
+    varY: vY,
+    variables: allVars,
+    partialX: {
+      node: pXNode,
+      pretty: pXPretty,
+      steps: stepsX.steps,
+    },
+    partialY: {
+      node: pYNode,
+      pretty: pYPretty,
+      steps: stepsY.steps,
+    },
+    gradientPretty,
+    secondPartialXX: pXXPretty,
+    secondPartialYY: pYYPretty,
+    secondPartialXY: pXYPretty,
+    hessianDeterminant,
+    grid: {
+      xRange: [xMin, xMax],
+      yRange: [yMin, yMax],
+      zRange: [Math.round(zMin * 100) / 100, Math.round(zMax * 100) / 100],
+      xSteps,
+      ySteps,
+      values,
     },
   };
 }
