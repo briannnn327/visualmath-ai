@@ -82,6 +82,18 @@ npm run build         # Next.js build
 Pipeline CI/CD: `.github/workflows/ci.yml` (lint → Biome → typecheck → Vitest + coverage → build; laporan SonarQube non-blocking).
 Quality gate SonarQube: `sonar-project.properties`.
 
+### Menjalankan scan SonarQube (opsional)
+
+Job `sonar-scan` otomatis **dilewati** selama secret belum tersedia. Agar scan benar-benar jalan, set secret berikut di repo:
+
+```bash
+gh secret set SONAR_TOKEN -v "<token dari sonarcloud.io/account/security>"
+gh secret set SONAR_HOST_URL -v "https://sonarcloud.io"   # opsional, sudah ada default
+```
+
+Project key & organisasi ditentukan di `sonar-project.properties` (`sonar.projectKey`, `sonar.organization`).
+Kode hasil `prisma generate` (`src/generated/prisma`) sudah dikecualikan agar tidak mengotori metrik.
+
 ## Struktur singkat
 
 ```
