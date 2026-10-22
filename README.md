@@ -29,7 +29,7 @@ Dibangun sebagai **Proyek Akhir Praktikum Pemrograman Front-End** — D3 Teknik 
 
 ## Menjalankan
 
-Prasyarat: Node 20+, Docker.
+Prasyarat: Node 24+, Docker.
 
 ```bash
 npm install
