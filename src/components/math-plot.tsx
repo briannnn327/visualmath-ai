@@ -24,7 +24,8 @@ function ticks(min: number, max: number, target?: number): number[] {
 
 function fmtTick(v: number): string {
   const rounded = Math.round(v * 100) / 100;
-  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+  // Bulat -> tanpa desimal, pecahan -> maksimal 2 desimal tanpa trailing nol.
+  return Number.isInteger(rounded) ? String(rounded) : String(Number(rounded.toFixed(2)));
 }
 
 interface MathPlotProps {

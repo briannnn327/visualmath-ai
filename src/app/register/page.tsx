@@ -12,6 +12,7 @@ import { useToastStore } from "@/components/ui/toast";
 import { PASSWORD_MIN_LENGTH } from "@/lib/schemas";
 import { type RegisterPayload, useAuthStore } from "@/lib/store/authStore";
 import type { Role } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -123,8 +124,8 @@ export default function RegisterPage() {
               </div>
             </Field>
 
-            {(role === "mahasiswa" || nim || true) && (
-              <div className="grid grid-cols-2 gap-3">
+            <div className={cn("grid gap-3", role === "mahasiswa" ? "grid-cols-2" : "grid-cols-1")}>
+              {role === "mahasiswa" && (
                 <Field label="NIM" htmlFor="nim">
                   <Input
                     id="nim"
@@ -133,16 +134,16 @@ export default function RegisterPage() {
                     onChange={(e) => setNim(e.target.value)}
                   />
                 </Field>
-                <Field label="Program Studi" htmlFor="prodi">
-                  <Input
-                    id="prodi"
-                    placeholder="D3 Teknik Informatika"
-                    value={prodi}
-                    onChange={(e) => setProdi(e.target.value)}
-                  />
-                </Field>
-              </div>
-            )}
+              )}
+              <Field label="Program Studi" htmlFor="prodi">
+                <Input
+                  id="prodi"
+                  placeholder="D3 Teknik Informatika"
+                  value={prodi}
+                  onChange={(e) => setProdi(e.target.value)}
+                />
+              </Field>
+            </div>
 
             <Field label="Kata Sandi" htmlFor="password" required>
               <div className="relative">

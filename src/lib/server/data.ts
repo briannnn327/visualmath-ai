@@ -271,10 +271,7 @@ export async function getKelasRoster(kelas: Kelas): Promise<RosterRow[]> {
       const avg = mapped.length ? mapped.reduce((s, m) => s + m.mastery, 0) / mapped.length : 0;
       const xp = pRows.reduce((s, p) => s + p.xp, 0);
       const lastActive = pRows.length
-        ? pRows
-            .map((p) => p.updatedAt)
-            .sort()
-            .reverse()[0]
+        ? pRows.map((p) => p.updatedAt).sort((a, b) => b.localeCompare(a))[0]
         : user.createdAt;
       return { user, rows: mapped, avg: Math.round(avg * 10) / 10, xp, lastActive };
     })

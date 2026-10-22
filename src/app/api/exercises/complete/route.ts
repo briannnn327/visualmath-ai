@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     xp: parsed.data.xp,
   });
 
-  recordActivity({
+  await recordActivity({
     userId: user.id,
     actorName: user.name,
     action: "quiz.submit",
