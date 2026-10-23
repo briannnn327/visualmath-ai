@@ -3,6 +3,8 @@ import {
   analyzeExpression,
   analyzeMultivariableExpression,
   diff,
+  evaluateScope,
+  type MathNode,
   makeFunction,
   makeFunction2D,
   ParseError,
@@ -89,5 +91,25 @@ describe("math parser — analisis ekspresi", () => {
     if (!pX) throw new Error("turunan parsial X tidak boleh null");
     const f2d = makeFunction2D(pX, "x", "y");
     expect(f2d(3, 5)).toBeCloseTo(6, 4); // 2*3 = 6
+  });
+
+  it("mengenali konstanta built-in dan menolak konstanta yang tidak dikenal", () => {
+    expect(evaluateScope({ kind: "const", name: "pi" }, {})).toBe(Math.PI);
+    expect(evaluateScope({ kind: "const", name: "e" }, {})).toBe(Math.E);
+    // Nama konstanta di luar daftar CONSTANTS tidak boleh jatuh diam-diam ke angka lain.
+    const unknownConst = { kind: "const", name: "gamma" } as unknown as MathNode;
+    expect(evaluateScope(unknownConst, {})).toBeNaN();
+  });
+
+  it("mengembalikan NaN untuk nama fungsi yang tidak dikenal", () => {
+    const node: MathNode = { kind: "fn", name: "unknownFn", arg: { kind: "num", value: 1 } };
+    expect(evaluateScope(node, {})).toBeNaN();
+  });
+
+  it("menandai nilai di luar domain fungsi sebagai NaN pada grid multivariabel", () => {
+    // ln(x) tidak terdefinisi untuk x < 0, jadi grid harus memuat NaN.
+    const res = analyzeMultivariableExpression("ln(x) + y", "x", "y");
+    const adaNaN = res.grid.values.some((row) => row.some((v) => Number.isNaN(v)));
+    expect(adaNaN).toBe(true);
   });
 });
