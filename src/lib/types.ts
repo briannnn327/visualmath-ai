@@ -238,6 +238,7 @@ export interface MultivariableAnalysis {
 /** Sumber materi (hasil retrieval pgvector) yang dipakai sebagai referensi AI. */
 export interface RagCitation {
   id: string;
+  materialId: string;
   title: string;
   topicId: string | null;
   topicTitle: string | null;

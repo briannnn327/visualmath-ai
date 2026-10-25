@@ -29,8 +29,11 @@ describe("schemas — validasi input", () => {
   });
 
   it("membatasi jawaban latihan maksimal 200 karakter", () => {
-    const base = { questionId: "q1", topicId: "t1" };
+    const base = { questionId: "q1", topicId: "t1", sessionId: "sesi-1234" };
     expect(exerciseAnswerSchema.safeParse({ ...base, answer: "ok" }).success).toBe(true);
+    expect(exerciseAnswerSchema.safeParse({ ...base, answer: "ok", sessionId: "" }).success).toBe(
+      false,
+    );
     expect(exerciseAnswerSchema.safeParse({ ...base, answer: "a".repeat(201) }).success).toBe(
       false,
     );

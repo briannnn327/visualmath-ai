@@ -14,6 +14,7 @@ import {
 function chunk(overrides: Partial<RagChunk> = {}): RagChunk {
   return {
     id: "m1",
+    materialId: "m1",
     title: "Turunan Parsial",
     content: "Isi materi turunan parsial.",
     topicId: "t1",
@@ -49,6 +50,7 @@ describe("rag-core — helper murni", () => {
     const citations = toCitations([chunk({ similarity: 0.12345 })]);
     expect(citations[0]).toEqual({
       id: "m1",
+      materialId: "m1",
       title: "Turunan Parsial",
       topicId: "t1",
       topicTitle: "Turunan",
@@ -102,12 +104,12 @@ describe("rag-core — chunking materi", () => {
 describe("rag-core — dedupe per materi", () => {
   it("menyimpan skor tertinggi per materi dan mengurutkan menurun", () => {
     const deduped = dedupeByMaterial([
-      chunk({ id: "m1", similarity: 0.4, content: "rendah" }),
-      chunk({ id: "m1", similarity: 0.7, content: "terbaik" }),
-      chunk({ id: "m2", similarity: 0.9 }),
+      chunk({ id: "c1", materialId: "m1", similarity: 0.4, content: "rendah" }),
+      chunk({ id: "c2", materialId: "m1", similarity: 0.7, content: "terbaik" }),
+      chunk({ id: "c3", materialId: "m2", similarity: 0.9 }),
     ]);
-    expect(deduped.map((c) => c.id)).toEqual(["m2", "m1"]);
-    expect(deduped.find((c) => c.id === "m1")?.similarity).toBe(0.7);
-    expect(deduped.find((c) => c.id === "m1")?.content).toBe("terbaik");
+    expect(deduped.map((c) => c.materialId)).toEqual(["m2", "m1"]);
+    expect(deduped.find((c) => c.materialId === "m1")?.similarity).toBe(0.7);
+    expect(deduped.find((c) => c.materialId === "m1")?.content).toBe("terbaik");
   });
 });

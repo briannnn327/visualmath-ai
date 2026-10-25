@@ -7,6 +7,7 @@ import {
   findCertificateForTopic,
   getTopicById,
   recordActivity,
+  sessionSummary,
 } from "@/lib/db/store";
 import { apiUser, badRequest, unauthorized } from "@/lib/server/api-auth";
 import { notifyUser } from "@/lib/server/notify";
@@ -14,9 +15,7 @@ import { randomString, uid } from "@/lib/utils";
 
 const schema = z.object({
   topicId: z.string().min(1),
-  total: z.number().int().min(1).max(50),
-  correct: z.number().int().min(0).max(50),
-  xp: z.number().int().min(0).max(2000),
+  sessionId: z.string().min(8).max(100),
   finishReason: z.enum(["selesai", "quit"]).optional(),
 });
 
@@ -47,16 +46,33 @@ export async function POST(request: NextRequest) {
   }
 
   const topic = await getTopicById(parsed.data.topicId);
-  const score = Math.round((parsed.data.correct / parsed.data.total) * 100);
+  /* Rekap dari catatan server — body klien tidak dipakai untuk skor/XP. */
+  const { total, correct, xp } = await sessionSummary(
+    user.id,
+    parsed.data.sessionId,
+    parsed.data.topicId,
+  );
+  const score = total > 0 ? Math.round((correct / total) * 100) : 0;
   const topicTitle = topic?.title ?? "Latihan";
 
-  const rec = addHistory({
+  if (total === 0) {
+    return NextResponse.json({
+      history: null,
+      score,
+      total,
+      correct,
+      xp,
+      certificateId: null,
+    });
+  }
+
+  const rec = await addHistory({
     userId: user.id,
     kind: "quiz",
     title: `Kuis adaptif: ${topicTitle}`,
-    summary: `Skor ${score} · ${parsed.data.correct} dari ${parsed.data.total} benar · +${parsed.data.xp} XP${parsed.data.finishReason === "quit" ? " (dihentikan)" : ""}.`,
+    summary: `Skor ${score} · ${correct} dari ${total} benar · +${xp} XP${parsed.data.finishReason === "quit" ? " (dihentikan)" : ""}.`,
     score,
-    xp: parsed.data.xp,
+    xp,
   });
 
   await recordActivity({
@@ -81,7 +97,7 @@ export async function POST(request: NextRequest) {
         topicId: topic.id,
         topicTitle,
         score,
-        xp: parsed.data.xp,
+        xp,
         recipientName: user.name,
         identity: user.nim || user.email,
         code: certificateCode(),
@@ -107,5 +123,5 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ history: rec, score, certificateId });
+  return NextResponse.json({ history: rec, score, total, correct, xp, certificateId });
 }

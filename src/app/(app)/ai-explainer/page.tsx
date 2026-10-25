@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { MathPlot } from "@/components/math-plot";
@@ -372,14 +373,14 @@ export default function AIExplainerPage() {
                         key={ref.id}
                         className="flex items-center justify-between gap-3 rounded-xl border border-outline-variant bg-surface p-3"
                       >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-on-surface">
+                        <Link href={`/materi/${ref.materialId}`} className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-on-surface hover:text-primary">
                             {ref.title}
                           </p>
                           {ref.topicTitle && (
                             <p className="text-xs text-on-surface-variant">{ref.topicTitle}</p>
                           )}
-                        </div>
+                        </Link>
                         <Badge variant="tertiary">{Math.round(ref.similarity * 100)}% cocok</Badge>
                       </div>
                     ))}

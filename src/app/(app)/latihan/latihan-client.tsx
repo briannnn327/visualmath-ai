@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,7 +11,9 @@ import { Ring } from "@/components/ui/ring";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 import { useToastStore } from "@/components/ui/toast";
 import {
+  type CompleteExerciseResult,
   type ExerciseAIResult,
+  type SafeQuestion,
   useCheckAnswer,
   useCompleteExercise,
   useExerciseExplain,
@@ -26,18 +28,25 @@ import { formatNumber, topicIcon } from "@/lib/utils";
 
 const GOAL = 5;
 
+/** Format detik menjadi mm:ss untuk timer sesi. */
+function clock(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, "0");
+  const seconds = Math.floor(totalSeconds % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
+
 const diffBadge: Record<Difficulty, "success" | "warning" | "error"> = {
   mudah: "success",
   sedang: "warning",
   sulit: "error",
 };
 
-interface Summary {
+interface Summary extends Omit<CompleteExerciseResult, "history" | "certificateId"> {
   topicId: string;
-  total: number;
-  correct: number;
-  xp: number;
-  score: number;
   reason: "selesai" | "quit";
   topicTitle: string;
 }
@@ -56,12 +65,19 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
   const difficulty = useExerciseStore((s) => s.difficulty);
   const total = useExerciseStore((s) => s.total);
   const xp = useExerciseStore((s) => s.xp);
+  const sessionId = useExerciseStore((s) => s.sessionId);
+  const startedAt = useExerciseStore((s) => s.startedAt);
+  const answeredQuestionIds = useExerciseStore((s) => s.answeredQuestionIds);
+  const hydrated = useExerciseStore((s) => s.hydrated);
 
+  const [elapsedSec, setElapsedSec] = useState(0);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [lastFeedback, setLastFeedback] = useState<{
     result: AnswerResult;
     mastery: number;
     questionId: string;
+    /** Bekukan soal yang dijawab agar tidak berganti saat query berikutnya berjalan. */
+    question: SafeQuestion;
   } | null>(null);
   const [answer, setAnswer] = useState("");
   const [choice, setChoice] = useState("");
@@ -70,11 +86,42 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
   const [enriched, setEnriched] = useState<ExerciseAIResult | null>(null);
   const [preselect] = useState(initialTopicId);
 
-  const questionQuery = useQuestion(topicId, difficulty, active);
-  const question = questionQuery.data?.question ?? null;
+  /* Rehidrasi sesi dari localStorage setelah mount (hindari mismatch SSR). */
+  useEffect(() => {
+    void (async () => {
+      try {
+        await useExerciseStore.persist.rehydrate();
+      } finally {
+        useExerciseStore.getState().markHydrated();
+      }
+    })();
+  }, []);
+
+  /* Timer sesi berjalan selama sesi aktif. */
+  useEffect(() => {
+    if (!active || !startedAt) return;
+    const started = new Date(startedAt).getTime();
+    const timer = window.setInterval(() => {
+      setElapsedSec(Math.max(0, Math.floor((Date.now() - started) / 1000)));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [active, startedAt]);
+
+  const exclude = answeredQuestionIds.join(",");
+  const questionQuery = useQuestion(
+    topicId,
+    difficulty,
+    active && hydrated,
+    exclude,
+    total,
+    sessionId ?? "",
+  );
+  /* Saat feedback tampil, pakai soal yang dibekukan agar tidak tertukar dengan soal berikutnya. */
+  const question = lastFeedback?.question ?? questionQuery.data?.question ?? null;
 
   function start(topicIdInput: string, title: string) {
     useExerciseStore.getState().start({ topicId: topicIdInput, topicTitle: title });
+    setElapsedSec(0);
     setSummary(null);
     setLastFeedback(null);
     setAnswer("");
@@ -89,27 +136,23 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
     snapshot: {
       topicId: string | null;
       topicTitle: string;
-      total: number;
-      correct: number;
-      xp: number;
+      sessionId: string | null;
     },
   ) {
-    if (!snapshot.topicId) return;
+    if (!snapshot.topicId || !snapshot.sessionId) return;
     try {
-      const { score } = await complete.mutateAsync({
+      const result = await complete.mutateAsync({
         topicId: snapshot.topicId,
-        total: snapshot.total,
-        correct: snapshot.correct,
-        xp: snapshot.xp,
+        sessionId: snapshot.sessionId,
         finishReason: reason,
       });
       setSummary({
         topicId: snapshot.topicId,
         topicTitle: snapshot.topicTitle,
-        total: snapshot.total,
-        correct: snapshot.correct,
-        xp: snapshot.xp,
-        score,
+        total: result.total,
+        correct: result.correct,
+        xp: result.xp,
+        score: result.score,
         reason,
       });
       useExerciseStore.getState().reset();
@@ -126,15 +169,31 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
       pushToast("warning", "Jawaban masih kosong");
       return;
     }
+    if (!sessionId) {
+      pushToast("error", "Sesi latihan tidak valid. Mulai ulang latihan.");
+      return;
+    }
+    const questionStartedAt = useExerciseStore.getState().questionStartedAt;
+    const timeMs = questionStartedAt
+      ? Math.min(3_600_000, Math.max(0, Date.now() - new Date(questionStartedAt).getTime()))
+      : 0;
     try {
       const { result, mastery } = await checkAnswer.mutateAsync({
         questionId: question.id,
         // biome-ignore lint/style/noNonNullAssertion: halaman hanya diakses dari dalam topik.
         topicId: topicId!,
+        sessionId,
         answer: userAnswer,
-        timeMs: 0,
+        timeMs,
       });
-      setLastFeedback({ result, mastery, questionId: question.id });
+      /* Catat progres lokal segera setelah server menerima jawaban. */
+      useExerciseStore.getState().record({
+        questionId: question.id,
+        correct: result.correct,
+        xpEarned: result.xpEarned,
+        nextDifficulty: result.nextDifficulty,
+      });
+      setLastFeedback({ result, mastery, questionId: question.id, question });
       setEnriched(null);
       // Perkaya pembahasan dengan konteks materi (RAG) di latar belakang.
       explainHelp
@@ -169,15 +228,8 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
 
   async function handleNext() {
     if (!lastFeedback) return;
-    const willFinish = useExerciseStore.getState().total + 1 >= GOAL;
-    useExerciseStore
-      .getState()
-      .record(
-        lastFeedback.result.correct,
-        lastFeedback.result.xpEarned,
-        lastFeedback.result.nextDifficulty,
-      );
     const snapshot = useExerciseStore.getState();
+    const willFinish = snapshot.total >= GOAL;
     setLastFeedback(null);
     setAnswer("");
     setChoice("");
@@ -190,6 +242,15 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
   async function handleQuit() {
     const snapshot = useExerciseStore.getState();
     await finish("quit", snapshot);
+  }
+
+  if (!hydrated) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <SkeletonCard />
+      </div>
+    );
   }
 
   /* ================= VIEW HASIL ================= */
@@ -325,7 +386,7 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
         <div>
           <h2 className="font-display text-xl font-extrabold text-on-surface">{topicTitle}</h2>
           <p className="text-sm text-on-surface-variant">
-            Soal {Math.min(total + 1, GOAL)} dari {GOAL}
+            Soal {Math.min(lastFeedback ? total : total + 1, GOAL)} dari {GOAL}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -336,7 +397,11 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
           <Badge variant="primary">
             <Icon name="star" size={12} />+{formatNumber(xp)} XP
           </Badge>
-          <Button variant="ghost" size="sm" onClick={handleQuit}>
+          <Badge variant="neutral" className="tabular">
+            <Icon name="clock" size={12} />
+            {clock(elapsedSec)}
+          </Badge>
+          <Button variant="ghost" size="sm" onClick={handleQuit} loading={complete.isPending}>
             Hentikan
           </Button>
         </div>
@@ -384,8 +449,14 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
                         className="math-mono"
                         inputMode="decimal"
                         autoFocus
+                        disabled={!!lastFeedback}
                       />
-                      <Button type="submit" loading={checkAnswer.isPending} icon="check">
+                      <Button
+                        type="submit"
+                        loading={checkAnswer.isPending}
+                        disabled={!!lastFeedback}
+                        icon="check"
+                      >
                         Kirim
                       </Button>
                     </div>
@@ -439,7 +510,7 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
                     <Button
                       type="submit"
                       loading={checkAnswer.isPending}
-                      disabled={!choice}
+                      disabled={!choice || !!lastFeedback}
                       icon="check"
                     >
                       Kunci Jawaban
@@ -500,9 +571,18 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
                   </ul>
                 )}
                 {enriched?.references && enriched.references.length > 0 && (
-                  <p className="mt-2 text-xs text-on-surface-variant">
-                    Sumber materi: {enriched.references.map((r) => r.title).join(", ")}
-                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-on-surface-variant">
+                    <span>Sumber materi:</span>
+                    {enriched.references.map((r) => (
+                      <Link
+                        key={r.id}
+                        href={`/materi/${r.materialId}`}
+                        className="font-semibold text-primary hover:underline"
+                      >
+                        {r.title}
+                      </Link>
+                    ))}
+                  </div>
                 )}
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -522,7 +602,7 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
                     onClick={handleNext}
                     loading={complete.isPending}
                   >
-                    {total + 1 >= GOAL ? "Selesaikan" : "Soal Berikutnya"}
+                    {total >= GOAL ? "Selesaikan" : "Soal Berikutnya"}
                   </Button>
                 </div>
               </div>

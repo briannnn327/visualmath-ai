@@ -9,9 +9,18 @@ import { Modal } from "@/components/ui/modal";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { useToastStore } from "@/components/ui/toast";
 import type { ClassWithStats } from "@/lib/hooks/queries";
-import { useClasses, useCreateClass, useDeleteClass, useUpdateClass } from "@/lib/hooks/queries";
+import {
+  useAddClassMember,
+  useClasses,
+  useClassMembers,
+  useCreateClass,
+  useDeleteClass,
+  useRemoveClassMember,
+  useUpdateClass,
+} from "@/lib/hooks/queries";
 import { useAuthStore } from "@/lib/store/authStore";
-import { formatDate } from "@/lib/utils";
+import type { PublicUser } from "@/lib/types";
+import { formatDate, initials } from "@/lib/utils";
 
 export default function DosenKelasPage() {
   const currentUser = useAuthStore((s) => s.user);
@@ -21,12 +30,24 @@ export default function DosenKelasPage() {
   const createClass = useCreateClass();
   const updateClass = useUpdateClass();
   const deleteClass = useDeleteClass();
+  const addMember = useAddClassMember();
+  const removeMember = useRemoveClassMember();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ClassWithStats | null>(null);
   const [kode, setKode] = useState("");
   const [nama, setNama] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [memberClass, setMemberClass] = useState<ClassWithStats | null>(null);
+  const [memberQuery, setMemberQuery] = useState("");
+
+  const {
+    data: members,
+    isLoading: membersLoading,
+    isError: membersError,
+    error: membersErrorValue,
+    refetch: refetchMembers,
+  } = useClassMembers(memberClass?.id ?? null);
 
   const saving = createClass.isPending || updateClass.isPending;
 
@@ -47,6 +68,46 @@ export default function DosenKelasPage() {
   function closeModal() {
     setModalOpen(false);
     setEditing(null);
+  }
+
+  function openMembers(k: ClassWithStats) {
+    setMemberQuery("");
+    setMemberClass(k);
+  }
+
+  function closeMembers() {
+    setMemberClass(null);
+    setMemberQuery("");
+  }
+
+  async function handleAddMember(e: FormEvent) {
+    e.preventDefault();
+    if (!memberClass) return;
+    if (memberQuery.trim().length < 3) {
+      pushToast("warning", "Masukkan email atau NIM mahasiswa.");
+      return;
+    }
+    try {
+      const { member } = await addMember.mutateAsync({
+        kelasId: memberClass.id,
+        query: memberQuery.trim(),
+      });
+      setMemberQuery("");
+      pushToast("success", `${member.name} ditambahkan ke kelas.`);
+    } catch (err) {
+      pushToast("error", err instanceof Error ? err.message : "Gagal menambah anggota.");
+    }
+  }
+
+  async function handleRemoveMember(member: PublicUser) {
+    if (!memberClass) return;
+    if (!window.confirm(`Keluarkan ${member.name} dari kelas ${memberClass.nama}?`)) return;
+    try {
+      await removeMember.mutateAsync({ kelasId: memberClass.id, userId: member.id });
+      pushToast("success", `${member.name} dikeluarkan dari kelas.`);
+    } catch (err) {
+      pushToast("error", err instanceof Error ? err.message : "Gagal mengeluarkan anggota.");
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -197,6 +258,16 @@ export default function DosenKelasPage() {
               <p className="mt-3 text-xs text-on-surface-variant">
                 Dibuat {formatDate(k.createdAt)}
               </p>
+
+              <Button
+                variant="outline"
+                size="sm"
+                icon="users"
+                className="mt-3 w-full"
+                onClick={() => openMembers(k)}
+              >
+                Kelola Anggota
+              </Button>
             </CardContent>
           </Card>
         ))}
@@ -238,6 +309,84 @@ export default function DosenKelasPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={!!memberClass}
+        onClose={closeMembers}
+        title={`Anggota ${memberClass?.nama ?? ""}`}
+        description={`Kode ${memberClass?.kode ?? ""} · ${memberClass?.studentCount ?? 0} mahasiswa`}
+        size="md"
+      >
+        <div className="space-y-4">
+          <form onSubmit={handleAddMember} className="space-y-2">
+            <Field label="Tambah mahasiswa" hint="Masukkan email atau NIM yang terdaftar.">
+              <div className="flex gap-2">
+                <Input
+                  value={memberQuery}
+                  onChange={(e) => setMemberQuery(e.target.value)}
+                  placeholder="nama@kampus.id atau V3925001"
+                  autoFocus
+                />
+                <Button type="submit" loading={addMember.isPending} icon="plus">
+                  Tambah
+                </Button>
+              </div>
+            </Field>
+          </form>
+
+          {membersLoading && <SkeletonCard />}
+
+          {membersError && (
+            <div className="flex flex-col items-start gap-2 rounded-xl bg-error-container/50 p-3">
+              <p className="text-sm text-error">
+                {membersErrorValue?.message ?? "Gagal memuat anggota."}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                icon="refresh"
+                onClick={() => void refetchMembers()}
+              >
+                Muat Ulang
+              </Button>
+            </div>
+          )}
+
+          {!membersLoading && !membersError && (members?.length ?? 0) === 0 && (
+            <p className="rounded-xl bg-surface-container/60 p-4 text-sm text-on-surface-variant">
+              Belum ada mahasiswa di kelas ini.
+            </p>
+          )}
+
+          <div className="space-y-2">
+            {(members ?? []).map((member) => (
+              <div
+                key={member.id}
+                className="flex items-center gap-3 rounded-xl border border-outline-variant bg-surface p-3"
+              >
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-secondary-container text-xs font-bold text-on-secondary-container">
+                  {initials(member.name)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-on-surface">{member.name}</p>
+                  <p className="truncate text-xs text-on-surface-variant">
+                    {member.nim ? `${member.nim} · ` : ""}
+                    {member.email}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  icon="trash"
+                  aria-label={`Keluarkan ${member.name}`}
+                  loading={removeMember.isPending && removeMember.variables?.userId === member.id}
+                  onClick={() => void handleRemoveMember(member)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
       </Modal>
     </div>
   );

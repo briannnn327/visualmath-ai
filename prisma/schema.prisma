@@ -77,6 +77,7 @@ model User {
   sessions      Session[]
   notifications Notification[]
   certificates  Certificate[]
+  questionAttempts QuestionAttempt[]
 }
 
 model Kelas {
@@ -106,6 +107,7 @@ model Topic {
   progress  Progress[]
   materials MaterialItem[]
   formulas  FormulaRecord[]
+  attempts  QuestionAttempt[]
 }
 
 model Question {
@@ -120,6 +122,33 @@ model Question {
   expectedAnswer String
   explanation    String
   hint           String?
+  attempts       QuestionAttempt[]
+}
+
+/**
+ * Satu jawaban per soal per sesi latihan. Dipakai untuk:
+ * - mencegah XP/hint farming (XP hanya sekali per soal per mahasiswa),
+ * - menghitung rekap sesi di server (bukan dari body klien),
+ * - mengeluarkan soal yang sudah dijawab dari undian berikutnya.
+ */
+model QuestionAttempt {
+  id         String     @id
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId  String
+  questionId String
+  question   Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  topicId    String
+  topic      Topic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  difficulty Difficulty
+  correct    Boolean
+  xpEarned   Int
+  timeMs     Int        @default(0)
+  createdAt  DateTime   @default(now())
+
+  @@unique([sessionId, questionId])
+  @@index([userId, questionId])
+  @@index([userId, sessionId])
 }
 
 model Progress {

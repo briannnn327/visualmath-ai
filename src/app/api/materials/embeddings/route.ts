@@ -9,15 +9,17 @@ import {
   tooManyRequests,
   unauthorized,
 } from "@/lib/server/api-auth";
+import { materialScope, ragKelasIds } from "@/lib/server/material-scope";
 import { checkAiRateLimit } from "@/lib/server/rate-limit";
 
-/** Status embedding materi (dosen & admin). */
+/** Status embedding materi (dosen & admin), dibatasi ke kelas yang diampu. */
 export async function GET(request: NextRequest) {
   const user = await apiUser(request);
   if (!user) return unauthorized();
   if (user.role !== "dosen" && user.role !== "admin") return forbidden();
 
-  const status = await embeddingStatus();
+  const scope = await materialScope(user);
+  const status = await embeddingStatus(ragKelasIds(scope));
   return NextResponse.json({ status });
 }
 
@@ -43,7 +45,11 @@ export async function POST(request: NextRequest) {
   }
   const onlyMissing = (body as { onlyMissing?: unknown }).onlyMissing !== false;
 
-  const summary = await backfillMaterialEmbeddings({ onlyMissing });
+  const scope = await materialScope(user);
+  const summary = await backfillMaterialEmbeddings({
+    onlyMissing,
+    kelasIds: ragKelasIds(scope),
+  });
   if (!summary.aiConfigured) {
     return badRequest("Fitur embedding memerlukan konfigurasi AI (GOOGLE_GENERATIVE_AI_API_KEY).");
   }

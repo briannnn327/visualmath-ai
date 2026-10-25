@@ -11,12 +11,26 @@ berserta alasannya.
 | Organization | `briannnn327` |
 | Scope analisis | `sonar.sources=src` (file test & `src/generated/prisma` dikecualikan) |
 | Coverage | `coverage/lcov.info`, dikirim job `sonar-scan` (`npm run test:coverage`) |
+| Coverage exclusion | UI (`src/app/**`, `src/components/**`), hook data-fetching, dan adapter integrasi DB/pgvector/AI |
 | Automatic Analysis | **mati** — SonarCloud menolak CI analysis selama autoscan aktif |
 
 Dashboard: <https://sonarcloud.io/dashboard?id=briannnn327_visualmath-ai&branch=main>
 
 Konfigurasi scanner ada di [`sonar-project.properties`](../sonar-project.properties),
 job CI ada di [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
+
+### Mengapa UI & adapter integrasi dikecualikan dari coverage?
+
+Vitest repo ini adalah **unit test** untuk logika murni (`src/lib/math`, `rag-core`,
+schema, store, dsb.). Halaman/route Next.js, hook TanStack Query, dan adapter yang
+menyentuh PostgreSQL/pgvector/AI tidak punya unit test karena butuh server, DB, dan
+model AI sungguhan. Baris baru di area itu akan tampil 0% di Sonar dan menurunkan
+Quality Gate **new coverage** meski perilakunya sudah diverifikasi manual/E2E.
+
+Exclusion ini **tidak** membebaskan logika baru dari kewajiban tes: file murni seperti
+`src/lib/math/answer.ts`, `src/lib/server/material-scope.ts`, dan
+`src/lib/store/exerciseStore.ts` tetap dihitung dan harus tercakup. Saat E2E test
+ditambahkan, exclusion UI dapat dipersempit kembali.
 
 ## Aturan yang ditunda (won't fix)
 

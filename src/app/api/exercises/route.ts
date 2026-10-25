@@ -16,6 +16,13 @@ export async function GET(request: NextRequest) {
     request.nextUrl.searchParams.get("topicId") ?? request.nextUrl.searchParams.get("topic");
   const diffRaw = request.nextUrl.searchParams.get("difficulty") ?? "mudah";
   const diff = difficultySchema.safeParse(diffRaw).success ? (diffRaw as Difficulty) : "mudah";
+  const excluded = new Set(
+    (request.nextUrl.searchParams.get("exclude") ?? "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean)
+      .slice(0, 60),
+  );
 
   const questions = await listQuestions();
   const pool = questions.filter(
@@ -28,7 +35,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const question = pool[randomInt(pool.length)];
+  /* Hindari soal yang sudah dijawab di sesi ini; bila habis, izinkan ulang. */
+  const unseen = pool.filter((q) => !excluded.has(q.id));
+  const candidates = unseen.length > 0 ? unseen : pool;
+  const question = candidates[randomInt(candidates.length)];
   const topic = await getTopicById(question.topicId);
   const { expectedAnswer: _ea, ...safeQuestion } = question;
 

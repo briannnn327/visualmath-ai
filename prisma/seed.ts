@@ -243,7 +243,7 @@ const questions: SeedQuestion[] = [
     "sulit",
     "numeric",
     "Vektor percepatan r″(0) untuk r(t) = (t², eᵗ) adalah (pisahkan koma, 4 desimal).",
-    "2,1",
+    "2;1",
     "r″(t) = (2, eᵗ); r″(0) = (2, 1).",
     { hint: "Turunkan dua kali komponen per komponen." },
   ),

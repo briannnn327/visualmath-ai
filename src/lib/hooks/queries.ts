@@ -136,12 +136,23 @@ export function useScanSoal() {
 
 /* ---------- Latihan adaptif ---------- */
 
-export function useQuestion(topicId: string | null, difficulty: Difficulty, enabled = true) {
+export function useQuestion(
+  topicId: string | null,
+  difficulty: Difficulty,
+  enabled = true,
+  exclude = "",
+  attempt = 0,
+  sessionId = "",
+) {
   return useQuery({
-    queryKey: ["question", topicId, difficulty],
+    queryKey: ["question", sessionId, topicId, difficulty, attempt, exclude],
     queryFn: async () =>
       api.get<{ question: SafeQuestion | null; difficultyOrder: Difficulty[] }>(
-        qs("/api/exercises", { topicId: topicId ?? undefined, difficulty }),
+        qs("/api/exercises", {
+          topicId: topicId ?? undefined,
+          difficulty,
+          exclude: exclude || undefined,
+        }),
       ),
     enabled: enabled && Boolean(topicId),
   });
@@ -149,9 +160,23 @@ export function useQuestion(topicId: string | null, difficulty: Difficulty, enab
 
 export function useCheckAnswer() {
   return useMutation({
-    mutationFn: (input: { questionId: string; topicId: string; answer: string; timeMs?: number }) =>
-      api.post<{ result: AnswerResult; mastery: number }>("/api/exercises/answer", input),
+    mutationFn: (input: {
+      questionId: string;
+      topicId: string;
+      sessionId: string;
+      answer: string;
+      timeMs?: number;
+    }) => api.post<{ result: AnswerResult; mastery: number }>("/api/exercises/answer", input),
   });
+}
+
+export interface CompleteExerciseResult {
+  history: HistoryRecord | null;
+  score: number;
+  total: number;
+  correct: number;
+  xp: number;
+  certificateId: string | null;
 }
 
 export function useCompleteExercise() {
@@ -159,13 +184,13 @@ export function useCompleteExercise() {
   return useMutation({
     mutationFn: (input: {
       topicId: string;
-      total: number;
-      correct: number;
-      xp: number;
+      sessionId: string;
       finishReason?: "selesai" | "quit";
-    }) => api.post<{ history: HistoryRecord; score: number }>("/api/exercises/complete", input),
+    }) => api.post<CompleteExerciseResult>("/api/exercises/complete", input),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["topics"] });
+      void qc.invalidateQueries({ queryKey: ["profile"] });
+      void qc.invalidateQueries({ queryKey: ["history"] });
     },
   });
 }
@@ -328,6 +353,43 @@ export function useDeleteClass() {
     mutationFn: (id: string) => api.del<{ ok: boolean }>("/api/classes", { id }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["classes"] });
+    },
+  });
+}
+
+export function useClassMembers(kelasId: string | null) {
+  return useQuery({
+    queryKey: ["classes", "members", kelasId],
+    enabled: !!kelasId,
+    queryFn: async () => {
+      const { members } = await api.get<{ members: PublicUser[] }>(
+        `/api/classes/${kelasId}/members`,
+      );
+      return members;
+    },
+  });
+}
+
+export function useAddClassMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ kelasId, query }: { kelasId: string; query: string }) =>
+      api.post<{ member: PublicUser }>(`/api/classes/${kelasId}/members`, { query }),
+    onSuccess: (_data, vars) => {
+      void qc.invalidateQueries({ queryKey: ["classes"] });
+      void qc.invalidateQueries({ queryKey: ["classes", "members", vars.kelasId] });
+    },
+  });
+}
+
+export function useRemoveClassMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ kelasId, userId }: { kelasId: string; userId: string }) =>
+      api.del<{ ok: boolean }>(`/api/classes/${kelasId}/members`, { userId }),
+    onSuccess: (_data, vars) => {
+      void qc.invalidateQueries({ queryKey: ["classes"] });
+      void qc.invalidateQueries({ queryKey: ["classes", "members", vars.kelasId] });
     },
   });
 }

@@ -10,6 +10,7 @@ import {
   unauthorized,
 } from "@/lib/server/api-auth";
 import { helpForQuestion } from "@/lib/server/exercise-ai";
+import { materialScope, ragKelasIds } from "@/lib/server/material-scope";
 import { checkAiRateLimit } from "@/lib/server/rate-limit";
 
 /** Petunjuk (hint) berbasis AI + materi topik, untuk soal latihan. */
@@ -43,6 +44,7 @@ export async function POST(request: NextRequest) {
   );
   if (!question) return notFound("Soal tidak ditemukan");
 
-  const help = await helpForQuestion(question, "hint");
+  const scope = await materialScope(user);
+  const help = await helpForQuestion(question, "hint", ragKelasIds(scope));
   return NextResponse.json({ help });
 }

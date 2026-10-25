@@ -6,6 +6,8 @@ import type { RagCitation } from "@/lib/types";
 
 export interface RagChunk {
   id: string;
+  /** ID dokumen materi (bukan ID chunk) untuk tautan ke halaman materi. */
+  materialId: string;
   title: string;
   content: string;
   topicId: string | null;
@@ -42,6 +44,7 @@ export function filterBySimilarity(chunks: RagChunk[], min = RAG_MIN_SIMILARITY)
 export function toCitations(chunks: RagChunk[]): RagCitation[] {
   return chunks.map((c) => ({
     id: c.id,
+    materialId: c.materialId,
     title: c.title,
     topicId: c.topicId,
     topicTitle: c.topicTitle,
@@ -130,8 +133,8 @@ export function chunkText(text: string, options: ChunkOptions = {}): string[] {
 export function dedupeByMaterial(chunks: RagChunk[]): RagChunk[] {
   const best = new Map<string, RagChunk>();
   for (const chunk of chunks) {
-    const current = best.get(chunk.id);
-    if (!current || chunk.similarity > current.similarity) best.set(chunk.id, chunk);
+    const current = best.get(chunk.materialId);
+    if (!current || chunk.similarity > current.similarity) best.set(chunk.materialId, chunk);
   }
   return [...best.values()].sort((a, b) => b.similarity - a.similarity);
 }

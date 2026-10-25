@@ -525,6 +525,33 @@ export async function leaveKelas(userId: string): Promise<void> {
   ]);
 }
 
+/** Tambahkan mahasiswa ke kelas (dipakai dosen/admin). */
+export async function addKelasMember(kelasId: string, userId: string): Promise<void> {
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: userId }, data: { kelasId } }),
+    prisma.kelas.update({
+      where: { id: kelasId },
+      data: { mahasiswa: { connect: { id: userId } } },
+    }),
+  ]);
+}
+
+/** Keluarkan mahasiswa dari kelas tanpa menghapus akunnya. */
+export async function removeKelasMember(kelasId: string, userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { kelasId: true },
+  });
+  if (!user || user.kelasId !== kelasId) return;
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: userId }, data: { kelasId: null } }),
+    prisma.kelas.update({
+      where: { id: kelasId },
+      data: { mahasiswa: { disconnect: { id: userId } } },
+    }),
+  ]);
+}
+
 export async function createKelas(data: {
   id: string;
   kode: string;
@@ -602,6 +629,70 @@ export async function upsertProgress(entry: Progress): Promise<Progress> {
     },
   });
   return mapProgress(row);
+}
+
+/* ---------- Question attempts ---------- */
+
+/** Apakah soal ini sudah dijawab pada sesi yang sama? */
+export async function hasSessionAttempt(sessionId: string, questionId: string): Promise<boolean> {
+  const row = await prisma.questionAttempt.findUnique({
+    where: { sessionId_questionId: { sessionId, questionId } },
+    select: { id: true },
+  });
+  return row !== null;
+}
+
+/** Apakah mahasiswa pernah menjawab benar soal ini (di sesi mana pun)? */
+export async function hasCorrectAttempt(userId: string, questionId: string): Promise<boolean> {
+  const row = await prisma.questionAttempt.findFirst({
+    where: { userId, questionId, correct: true },
+    select: { id: true },
+  });
+  return row !== null;
+}
+
+/** Catat satu jawaban. Unique index sesi+soal menjaga dari duplikasi balapan. */
+export async function recordQuestionAttempt(data: {
+  id: string;
+  userId: string;
+  sessionId: string;
+  questionId: string;
+  topicId: string;
+  difficulty: Difficulty;
+  correct: boolean;
+  xpEarned: number;
+  timeMs: number;
+}): Promise<void> {
+  await prisma.questionAttempt.create({
+    data: {
+      id: data.id,
+      userId: data.userId,
+      sessionId: data.sessionId,
+      questionId: data.questionId,
+      topicId: data.topicId,
+      difficulty: data.difficulty,
+      correct: data.correct,
+      xpEarned: data.xpEarned,
+      timeMs: data.timeMs,
+    },
+  });
+}
+
+/** Rekap sesi dari catatan server, bukan dari nilai yang dikirim klien. */
+export async function sessionSummary(
+  userId: string,
+  sessionId: string,
+  topicId: string,
+): Promise<{ total: number; correct: number; xp: number }> {
+  const rows = await prisma.questionAttempt.findMany({
+    where: { userId, sessionId, topicId },
+    select: { correct: true, xpEarned: true },
+  });
+  return {
+    total: rows.length,
+    correct: rows.filter((r) => r.correct).length,
+    xp: rows.reduce((sum, r) => sum + r.xpEarned, 0),
+  };
 }
 
 /* ---------- History ---------- */

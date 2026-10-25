@@ -102,6 +102,7 @@ export type ScanInput = z.infer<typeof scanInputSchema>;
 export const exerciseAnswerSchema = z.object({
   questionId: z.string().min(1),
   topicId: z.string().min(1),
+  sessionId: z.string().min(8).max(100),
   answer: z.string().trim().max(200),
   timeMs: z.number().int().nonnegative().max(3_600_000).optional(),
 });

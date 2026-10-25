@@ -24,6 +24,7 @@ import {
   disabledStepExplain,
   resolveFormulaFlags,
 } from "@/lib/server/feature-gates";
+import { materialScope, ragKelasIds } from "@/lib/server/material-scope";
 import { checkAiRateLimit } from "@/lib/server/rate-limit";
 import type { FormulaAnalysis, FormulaRecord } from "@/lib/types";
 import { uid } from "@/lib/utils";
@@ -95,8 +96,10 @@ export async function POST(request: NextRequest) {
   if (flags.stepExplain) {
     try {
       const query = `${analysis.pretty} — aturan: ${analysis.rulesUsed.join(", ")}`;
+      const scope = await materialScope(user);
       const chunks = await searchMaterials(query, {
         topicId: input.topicId ?? null,
+        kelasIds: ragKelasIds(scope),
         limit: 4,
       });
       const reference = chunks.length > 0 ? buildReference(chunks) : null;

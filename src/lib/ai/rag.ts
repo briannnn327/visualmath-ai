@@ -6,6 +6,7 @@
    tetap memakai narasi parser.
    ========================================================= */
 
+import { Prisma } from "@/generated/prisma/client";
 import { embedText, isAIConfigured } from "@/lib/ai/gemini";
 import {
   chunkText,
@@ -65,6 +66,8 @@ export async function reindexMaterial(
 
 interface SearchOptions {
   topicId?: string | null;
+  /** Batasi retrieval ke kelas tertentu; array kosong = tidak ada hasil. */
+  kelasIds?: string[] | null;
   limit?: number;
   minSimilarity?: number;
 }
@@ -76,6 +79,8 @@ export async function searchMaterials(
 ): Promise<RagChunk[]> {
   const clean = query.trim();
   if (!clean || !isAIConfigured()) return [];
+  const kelasIds = options.kelasIds ?? null;
+  if (kelasIds && kelasIds.length === 0) return [];
   const vec = await embedText(clean);
   if (!vec) return [];
   const literal = vectorLiteral(vec);
@@ -83,8 +88,9 @@ export async function searchMaterials(
   const topicId = options.topicId ?? null;
 
   try {
-    const chunks = await searchChunkRows(literal, topicId, limit);
-    const rows = chunks.length > 0 ? chunks : await searchDocumentRows(literal, topicId, limit);
+    const chunks = await searchChunkRows(literal, topicId, kelasIds, limit);
+    const rows =
+      chunks.length > 0 ? chunks : await searchDocumentRows(literal, topicId, kelasIds, limit);
     return dedupeByMaterial(filterBySimilarity(rows, options.minSimilarity)).slice(0, limit);
   } catch (err) {
     console.warn("[rag] pencarian materi gagal:", err instanceof Error ? err.message : err);
@@ -92,49 +98,45 @@ export async function searchMaterials(
   }
 }
 
-function searchChunkRows(literal: string, topicId: string | null, limit: number) {
-  const cap = limit * 4;
-  return topicId
-    ? prisma.$queryRaw<RagChunk[]>`
-        SELECT m."id" AS "id", m."title" AS "title", c."content" AS "content",
-               m."topicId" AS "topicId", t."title" AS "topicTitle",
-               1 - (c."embedding" <=> ${literal}::vector) AS "similarity"
-        FROM "MaterialChunk" c
-        JOIN "MaterialItem" m ON m."id" = c."materialId"
-        LEFT JOIN "Topic" t ON t."id" = m."topicId"
-        WHERE c."embedding" IS NOT NULL AND m."topicId" = ${topicId}
-        ORDER BY c."embedding" <=> ${literal}::vector
-        LIMIT ${cap}`
-    : prisma.$queryRaw<RagChunk[]>`
-        SELECT m."id" AS "id", m."title" AS "title", c."content" AS "content",
-               m."topicId" AS "topicId", t."title" AS "topicTitle",
-               1 - (c."embedding" <=> ${literal}::vector) AS "similarity"
-        FROM "MaterialChunk" c
-        JOIN "MaterialItem" m ON m."id" = c."materialId"
-        LEFT JOIN "Topic" t ON t."id" = m."topicId"
-        WHERE c."embedding" IS NOT NULL
-        ORDER BY c."embedding" <=> ${literal}::vector
-        LIMIT ${cap}`;
+function scopeFilter(kelasIds: string[] | null) {
+  return kelasIds ? Prisma.sql`AND m."kelasId" = ANY(${kelasIds}::text[])` : Prisma.empty;
 }
 
-function searchDocumentRows(literal: string, topicId: string | null, limit: number) {
-  return topicId
-    ? prisma.$queryRaw<RagChunk[]>`
-        SELECT m."id", m."title", m."content", m."topicId", t."title" AS "topicTitle",
-               1 - (m."embedding" <=> ${literal}::vector) AS "similarity"
-        FROM "MaterialItem" m
-        LEFT JOIN "Topic" t ON t."id" = m."topicId"
-        WHERE m."embedding" IS NOT NULL AND m."topicId" = ${topicId}
-        ORDER BY m."embedding" <=> ${literal}::vector
-        LIMIT ${limit}`
-    : prisma.$queryRaw<RagChunk[]>`
-        SELECT m."id", m."title", m."content", m."topicId", t."title" AS "topicTitle",
-               1 - (m."embedding" <=> ${literal}::vector) AS "similarity"
-        FROM "MaterialItem" m
-        LEFT JOIN "Topic" t ON t."id" = m."topicId"
-        WHERE m."embedding" IS NOT NULL
-        ORDER BY m."embedding" <=> ${literal}::vector
-        LIMIT ${limit}`;
+function searchChunkRows(
+  literal: string,
+  topicId: string | null,
+  kelasIds: string[] | null,
+  limit: number,
+) {
+  const topic = topicId ? Prisma.sql`AND m."topicId" = ${topicId}` : Prisma.empty;
+  return prisma.$queryRaw<RagChunk[]>`
+    SELECT c."id" AS "id", m."id" AS "materialId", m."title" AS "title",
+           c."content" AS "content", m."topicId" AS "topicId", t."title" AS "topicTitle",
+           1 - (c."embedding" <=> ${literal}::vector) AS "similarity"
+    FROM "MaterialChunk" c
+    JOIN "MaterialItem" m ON m."id" = c."materialId"
+    LEFT JOIN "Topic" t ON t."id" = m."topicId"
+    WHERE c."embedding" IS NOT NULL ${topic} ${scopeFilter(kelasIds)}
+    ORDER BY c."embedding" <=> ${literal}::vector
+    LIMIT ${limit * 4}`;
+}
+
+function searchDocumentRows(
+  literal: string,
+  topicId: string | null,
+  kelasIds: string[] | null,
+  limit: number,
+) {
+  const topic = topicId ? Prisma.sql`AND m."topicId" = ${topicId}` : Prisma.empty;
+  return prisma.$queryRaw<RagChunk[]>`
+    SELECT m."id", m."id" AS "materialId", m."title", m."content", m."topicId",
+           t."title" AS "topicTitle",
+           1 - (m."embedding" <=> ${literal}::vector) AS "similarity"
+    FROM "MaterialItem" m
+    LEFT JOIN "Topic" t ON t."id" = m."topicId"
+    WHERE m."embedding" IS NOT NULL ${topic} ${scopeFilter(kelasIds)}
+    ORDER BY m."embedding" <=> ${literal}::vector
+    LIMIT ${limit}`;
 }
 
 export interface EmbeddingStatus {
@@ -146,12 +148,19 @@ export interface EmbeddingStatus {
 }
 
 /** Ringkasan berapa materi yang sudah punya embedding (dokumen & chunk). */
-export async function embeddingStatus(): Promise<EmbeddingStatus> {
+export async function embeddingStatus(kelasIds?: string[] | null): Promise<EmbeddingStatus> {
+  if (kelasIds && kelasIds.length === 0) {
+    return { total: 0, embedded: 0, missing: 0, chunks: 0, aiConfigured: isAIConfigured() };
+  }
   try {
+    const scope = kelasIds
+      ? Prisma.sql`WHERE m."kelasId" = ANY(${kelasIds}::text[])`
+      : Prisma.empty;
     const rows = await prisma.$queryRaw<Array<{ total: number; embedded: number; chunks: number }>>`
-      SELECT (SELECT COUNT(*)::int FROM "MaterialItem") AS "total",
-             (SELECT COUNT("embedding")::int FROM "MaterialItem") AS "embedded",
-             (SELECT COUNT(*)::int FROM "MaterialChunk") AS "chunks"`;
+      SELECT (SELECT COUNT(*)::int FROM "MaterialItem" m ${scope}) AS "total",
+             (SELECT COUNT(m."embedding")::int FROM "MaterialItem" m ${scope}) AS "embedded",
+             (SELECT COUNT(*)::int FROM "MaterialChunk" c
+              JOIN "MaterialItem" m ON m."id" = c."materialId" ${scope}) AS "chunks"`;
     const total = rows[0]?.total ?? 0;
     const embedded = rows[0]?.embedded ?? 0;
     return {
@@ -178,7 +187,7 @@ export interface BackfillSummary {
 
 /** Hitung ulang embedding untuk materi. Default hanya yang belum punya embedding. */
 export async function backfillMaterialEmbeddings(
-  options: { onlyMissing?: boolean } = {},
+  options: { onlyMissing?: boolean; kelasIds?: string[] | null } = {},
 ): Promise<BackfillSummary> {
   const onlyMissing = options.onlyMissing ?? true;
   const base: BackfillSummary = {
@@ -189,15 +198,20 @@ export async function backfillMaterialEmbeddings(
     skipped: 0,
     aiConfigured: isAIConfigured(),
   };
+  if (options.kelasIds && options.kelasIds.length === 0) return base;
   if (!base.aiConfigured) return base;
 
   let rows: Array<{ id: string; title: string; content: string; embedded: boolean }>;
   try {
+    const scope = options.kelasIds
+      ? Prisma.sql`WHERE "kelasId" = ANY(${options.kelasIds}::text[])`
+      : Prisma.empty;
     rows = await prisma.$queryRaw<
       Array<{ id: string; title: string; content: string; embedded: boolean }>
     >`
       SELECT "id", "title", "content", ("embedding" IS NOT NULL) AS "embedded"
       FROM "MaterialItem"
+      ${scope}
       ORDER BY "updatedAt" ASC`;
   } catch (err) {
     console.warn("[rag] backfill gagal memuat materi:", err instanceof Error ? err.message : err);

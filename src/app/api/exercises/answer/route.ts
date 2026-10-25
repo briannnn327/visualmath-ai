@@ -1,9 +1,19 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { getAIConfig, listQuestions, progressOf, upsertProgress } from "@/lib/db/store";
+import {
+  getAIConfig,
+  hasCorrectAttempt,
+  hasSessionAttempt,
+  listQuestions,
+  progressOf,
+  recordQuestionAttempt,
+  upsertProgress,
+} from "@/lib/db/store";
+import { answerMatches } from "@/lib/math/answer";
 import { difficultyPoint, exerciseAnswerSchema } from "@/lib/schemas";
 import { apiUser, badRequest, notFound, unauthorized } from "@/lib/server/api-auth";
 import type { AnswerResult, Difficulty, Progress, UserId } from "@/lib/types";
+import { uid } from "@/lib/utils";
 
 const DIFF_ORDER: Difficulty[] = ["mudah", "sedang", "sulit"];
 
@@ -35,30 +45,32 @@ export async function POST(request: NextRequest) {
   );
   if (!question) return notFound("Soal tidak ditemukan");
 
-  /* Periksa jawaban */
-  let correct = false;
-  const userAnswer = parsed.data.answer.trim();
-  if (question.type === "numeric") {
-    const a = Number(userAnswer.replace(/,/g, "."));
-    const e = Number(question.expectedAnswer);
-    if (Number.isFinite(a) && Number.isFinite(e)) correct = Math.abs(a - e) <= 0.05;
-  } else {
-    correct = userAnswer.toLowerCase() === question.expectedAnswer.trim().toLowerCase();
+  if (await hasSessionAttempt(parsed.data.sessionId, question.id)) {
+    return NextResponse.json({ error: "Soal ini sudah dijawab pada sesi ini" }, { status: 409 });
   }
+
+  /* Periksa jawaban */
+  const userAnswer = parsed.data.answer.trim();
+  const correct = answerMatches(question.type, userAnswer, question.expectedAnswer);
+  const alreadyCorrect = correct && (await hasCorrectAttempt(user.id, question.id));
 
   const cfg = await getAIConfig();
   const adaptive = cfg?.features.adaptiveQuiz ?? true;
 
-  const xpEarned = correct ? difficultyPoint[question.difficulty as Difficulty] : 0;
+  /* XP hanya diberikan sekali per soal per mahasiswa (anti-farming). */
+  const xpEarned =
+    correct && !alreadyCorrect ? difficultyPoint[question.difficulty as Difficulty] : 0;
 
   /* Update progres mastery & XP */
   const prev = await progressOf(user.id, question.topicId);
   const masteryDelta = correct
-    ? question.difficulty === "mudah"
-      ? 8
-      : question.difficulty === "sedang"
-        ? 10
-        : 14
+    ? alreadyCorrect
+      ? 0
+      : question.difficulty === "mudah"
+        ? 8
+        : question.difficulty === "sedang"
+          ? 10
+          : 14
     : -8;
   const p: Progress = prev ?? {
     userId: user.id as UserId,
@@ -81,6 +93,17 @@ export async function POST(request: NextRequest) {
     updatedAt: new Date().toISOString(),
   };
   await upsertProgress(updated);
+  await recordQuestionAttempt({
+    id: uid("qa-"),
+    userId: user.id,
+    sessionId: parsed.data.sessionId,
+    questionId: question.id,
+    topicId: question.topicId,
+    difficulty: question.difficulty,
+    correct,
+    xpEarned,
+    timeMs: parsed.data.timeMs ?? 0,
+  });
 
   const result: AnswerResult = {
     questionId: question.id,

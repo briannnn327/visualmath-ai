@@ -20,6 +20,7 @@ import {
   startOfToday,
 } from "@/lib/db/store";
 import { toPublicUser } from "@/lib/server/api-auth";
+import { canAccessMaterial, materialScope } from "@/lib/server/material-scope";
 import type {
   ActivityLog,
   ActivityTrendPoint,
@@ -28,6 +29,7 @@ import type {
   ClassWithStats,
   HistoryRecord,
   Kelas,
+  MaterialItem,
   Progress,
   PublicUser,
   SessionInfo,
@@ -189,6 +191,32 @@ export async function getStudentData(userId: string): Promise<StudentDashboardLi
 
 export async function getStudentHistory(userId: string): Promise<HistoryRecord[]> {
   return listHistoryByUser(userId);
+}
+
+export type StudentMaterial = MaterialItem & { topicTitle: string; kelasName: string };
+
+/** Materi yang boleh dibaca user (sudah discope per kelas/role). */
+export async function getStudentMaterials(user: PublicUser): Promise<StudentMaterial[]> {
+  const scope = await materialScope(user);
+  const [all, topics, classes] = await Promise.all([listMaterials(), listTopics(), listKelas()]);
+  const topicById = new Map(topics.map((t) => [t.id, t]));
+  const classById = new Map(classes.map((k) => [k.id, k]));
+  return all
+    .filter((m) => canAccessMaterial(scope, m))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .map((m) => ({
+      ...m,
+      topicTitle: topicById.get(m.topicId)?.title ?? "",
+      kelasName: classById.get(m.kelasId)?.nama ?? "",
+    }));
+}
+
+export async function getStudentMaterial(
+  user: PublicUser,
+  id: string,
+): Promise<StudentMaterial | null> {
+  const materials = await getStudentMaterials(user);
+  return materials.find((m) => m.id === id) ?? null;
 }
 
 /* ---------------- Dosen ---------------- */

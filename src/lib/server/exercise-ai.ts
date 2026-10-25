@@ -21,13 +21,18 @@ const HINT_FALLBACK = "Pelajari kembali konsep & rumus pada topik ini, lalu tera
 export async function helpForQuestion(
   question: Question,
   mode: "hint" | "explain",
+  kelasIds?: string[],
 ): Promise<ExerciseAIResult> {
   const fallback = (mode === "hint" ? question.hint : question.explanation) || HINT_FALLBACK;
 
   try {
     const cfg = await getAIConfig();
     const query = [question.prompt, question.latex ?? ""].join(" ").trim();
-    const chunks = await searchMaterials(query, { topicId: question.topicId, limit: 4 });
+    const chunks = await searchMaterials(query, {
+      topicId: question.topicId,
+      kelasIds,
+      limit: 4,
+    });
     const reference = chunks.length > 0 ? buildReference(chunks) : null;
     const ai = await exerciseHelp(
       {
