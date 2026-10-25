@@ -339,8 +339,41 @@ export async function createCertificate(data: {
   });
 }
 
+/**
+ * Buat sertifikat sekali saja. Jika request yang sama berjalan bersamaan,
+ * konflik primary key diperlakukan sebagai "sudah dibuat" agar ID tetap stabil.
+ */
+export async function createCertificateOnce(data: {
+  id: string;
+  userId: string;
+  topicId: string;
+  topicTitle: string;
+  score: number;
+  xp: number;
+  recipientName: string;
+  identity?: string | null;
+  code: string;
+}): Promise<{ certificate: CertificateRecord; created: boolean }> {
+  try {
+    const certificate = await createCertificate(data);
+    return { certificate, created: true };
+  } catch (error) {
+    const code = (error as { code?: string } | null)?.code;
+    if (code === "P2002") {
+      const existing = await getCertificateById(data.id);
+      if (existing) return { certificate: existing, created: false };
+    }
+    throw error;
+  }
+}
+
 export async function getCertificateById(id: string): Promise<CertificateRecord | null> {
   return prisma.certificate.findUnique({ where: { id } });
+}
+
+/** Lookup untuk halaman verifikasi publik; hanya memakai kode yang tidak dapat ditebak. */
+export async function getCertificateByCode(code: string): Promise<CertificateRecord | null> {
+  return prisma.certificate.findUnique({ where: { code } });
 }
 
 export async function listCertificatesForUser(userId: string): Promise<CertificateRecord[]> {

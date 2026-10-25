@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { type FormEvent, useEffect, useState } from "react";
+import { CertificateActions } from "@/components/certificate/certificate-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { Field, Input } from "@/components/ui/input";
 import { Ring } from "@/components/ui/ring";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 import { useToastStore } from "@/components/ui/toast";
+import { CERTIFICATE_MIN_SCORE } from "@/lib/certificate";
 import {
   type CompleteExerciseResult,
   type ExerciseAIResult,
@@ -45,7 +47,7 @@ const diffBadge: Record<Difficulty, "success" | "warning" | "error"> = {
   sulit: "error",
 };
 
-interface Summary extends Omit<CompleteExerciseResult, "history" | "certificateId"> {
+interface Summary extends Omit<CompleteExerciseResult, "history"> {
   topicId: string;
   reason: "selesai" | "quit";
   topicTitle: string;
@@ -153,6 +155,7 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
         correct: result.correct,
         xp: result.xp,
         score: result.score,
+        certificateId: result.certificateId,
         reason,
       });
       useExerciseStore.getState().reset();
@@ -265,13 +268,17 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
               size={140}
               label={`${pct}%`}
               sublabel={
-                pct >= 70 ? "Selesai!" : summary.reason === "quit" ? "Dihentikan" : "Coba lagi"
+                pct >= CERTIFICATE_MIN_SCORE
+                  ? "Selesai!"
+                  : summary.reason === "quit"
+                    ? "Dihentikan"
+                    : "Coba lagi"
               }
               color="var(--color-primary)"
             />
             <div>
               <h2 className="font-display text-2xl font-extrabold text-on-surface">
-                {pct >= 70
+                {pct >= CERTIFICATE_MIN_SCORE
                   ? "Kerja bagus!"
                   : summary.reason === "quit"
                     ? "Sesi dihentikan"
@@ -313,6 +320,36 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
             </div>
           </CardContent>
         </Card>
+
+        {summary.certificateId && (
+          <Card className="overflow-hidden border-primary/30">
+            <div className="flex items-center gap-3 bg-brand-gradient px-5 py-4 text-on-primary">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/15">
+                <Icon name="award" size={22} />
+              </span>
+              <div>
+                <p className="font-display text-base font-extrabold">Sertifikatmu sudah terbit</p>
+                <p className="text-xs text-white/80">
+                  Skor {summary.score}/100 · {summary.topicTitle}
+                </p>
+              </div>
+            </div>
+            <CardContent className="space-y-3 p-5">
+              <p className="text-sm text-on-surface-variant">
+                Lihat preview resmi, lalu unduh sebagai PDF atau PNG. Keduanya memakai desain dan
+                data yang sama.
+              </p>
+              <div className="flex flex-wrap items-start gap-2">
+                <Link href={`/sertifikat/${summary.certificateId}`}>
+                  <Button icon="award" size="sm">
+                    Lihat Sertifikat
+                  </Button>
+                </Link>
+                <CertificateActions certificateId={summary.certificateId} compact />
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }

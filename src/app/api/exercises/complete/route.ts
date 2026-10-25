@@ -1,17 +1,21 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isCertificateEligible } from "@/lib/certificate";
 import {
   addHistory,
-  createCertificate,
+  createCertificateOnce,
   findCertificateForTopic,
+  getCertificateByCode,
+  getCertificateById,
   getTopicById,
   recordActivity,
   sessionSummary,
 } from "@/lib/db/store";
 import { apiUser, badRequest, unauthorized } from "@/lib/server/api-auth";
+import { certificateResultId } from "@/lib/server/certificate-id";
 import { notifyUser } from "@/lib/server/notify";
-import { randomString, uid } from "@/lib/utils";
+import { randomString } from "@/lib/utils";
 
 const schema = z.object({
   topicId: z.string().min(1),
@@ -19,14 +23,31 @@ const schema = z.object({
   finishReason: z.enum(["selesai", "quit"]).optional(),
 });
 
-/** Skor minimum untuk mendapatkan sertifikat otomatis. */
-const CERTIFICATE_MIN_SCORE = 70;
-
 /** Kode sertifikat publik yang mudah dibaca & diverifikasi. */
 function certificateCode(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const body = randomString(8, alphabet);
   return `VM-${body.slice(0, 4)}-${body.slice(4)}`;
+}
+
+type NewCertificate = Parameters<typeof createCertificateOnce>[0];
+
+/** Ulangi hanya jika kode publik kebetulan bentrok (sangat jarang). */
+async function createCertificateWithUniqueCode(data: Omit<NewCertificate, "code">): Promise<{
+  certificate: Awaited<ReturnType<typeof createCertificateOnce>>["certificate"];
+  created: boolean;
+}> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    let code = certificateCode();
+    while (await getCertificateByCode(code)) code = certificateCode();
+    try {
+      return await createCertificateOnce({ ...data, code });
+    } catch (error) {
+      const conflict = (error as { code?: string } | null)?.code === "P2002";
+      if (!conflict || attempt === 2) throw error;
+    }
+  }
+  throw new Error("Gagal membuat kode sertifikat unik.");
 }
 
 export async function POST(request: NextRequest) {
@@ -85,41 +106,49 @@ export async function POST(request: NextRequest) {
 
   /* Terbitkan sertifikat otomatis bila lulus ambang & sesi tuntas. */
   let certificateId: string | null = null;
-  const passed = score >= CERTIFICATE_MIN_SCORE && parsed.data.finishReason !== "quit";
+  const passed = isCertificateEligible(score, parsed.data.finishReason);
   if (passed && topic) {
-    const existing = await findCertificateForTopic(user.id, topic.id);
-    if (existing && existing.score >= score) {
-      certificateId = existing.id;
+    const resultId = certificateResultId(user.id, topic.id, parsed.data.sessionId);
+    const sameResult = await getCertificateById(resultId);
+
+    if (sameResult) {
+      certificateId = sameResult.id;
     } else {
-      const cert = await createCertificate({
-        id: uid("cert-"),
-        userId: user.id,
-        topicId: topic.id,
-        topicTitle,
-        score,
-        xp,
-        recipientName: user.name,
-        identity: user.nim || user.email,
-        code: certificateCode(),
-      });
-      certificateId = cert.id;
+      const existing = await findCertificateForTopic(user.id, topic.id);
+      if (existing && existing.score >= score) {
+        certificateId = existing.id;
+      } else {
+        const { certificate: cert, created } = await createCertificateWithUniqueCode({
+          id: resultId,
+          userId: user.id,
+          topicId: topic.id,
+          topicTitle,
+          score,
+          xp,
+          recipientName: user.name,
+          identity: user.nim || user.email,
+        });
+        certificateId = cert.id;
 
-      await recordActivity({
-        userId: user.id,
-        actorName: user.name,
-        action: "certificate.issue",
-        target: cert.code,
-        severity: "info",
-      });
+        if (created) {
+          await recordActivity({
+            userId: user.id,
+            actorName: user.name,
+            action: "certificate.issue",
+            target: cert.code,
+            severity: "info",
+          });
 
-      await notifyUser({
-        userId: user.id,
-        kind: "success",
-        title: "Sertifikat pencapaian terbit!",
-        body: `Kamu lulus topik ${topicTitle} dengan skor ${score}/100.`,
-        href: `/sertifikat/${cert.id}`,
-        email: true,
-      });
+          await notifyUser({
+            userId: user.id,
+            kind: "success",
+            title: "Sertifikat pencapaian terbit!",
+            body: `Kamu lulus topik ${topicTitle} dengan skor ${score}/100.`,
+            href: `/sertifikat/${cert.id}`,
+            email: true,
+          });
+        }
+      }
     }
   }
 

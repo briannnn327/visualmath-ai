@@ -3,9 +3,9 @@ import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
+import { CERTIFICATE_MIN_SCORE, formatCertificateDate } from "@/lib/certificate";
 import { listCertificatesForUser } from "@/lib/db/store";
 import { getCurrentPublicUser } from "@/lib/server/data";
-import { formatDate } from "@/lib/utils";
 
 export default async function CertificatesPage() {
   const user = await getCurrentPublicUser();
@@ -18,7 +18,8 @@ export default async function CertificatesPage() {
       <div>
         <h2 className="font-display text-2xl font-extrabold text-on-surface">Sertifikat Saya</h2>
         <p className="mt-1 text-sm text-on-surface-variant">
-          Sertifikat otomatis dari kuis adaptif yang berhasil kamu tuntaskan (skor ≥ 70).
+          Sertifikat otomatis dari kuis adaptif yang berhasil kamu tuntaskan (skor ≥{" "}
+          {CERTIFICATE_MIN_SCORE}).
         </p>
       </div>
 
@@ -30,7 +31,8 @@ export default async function CertificatesPage() {
             </span>
             <h3 className="font-display text-lg font-bold text-on-surface">Belum ada sertifikat</h3>
             <p className="max-w-md text-sm text-on-surface-variant">
-              Selesaikan kuis adaptif dengan skor minimal 70 untuk mendapatkan sertifikat otomatis.
+              Selesaikan kuis adaptif dengan skor minimal {CERTIFICATE_MIN_SCORE} untuk mendapatkan
+              sertifikat otomatis.
             </p>
             <Link
               href="/latihan"
@@ -58,14 +60,14 @@ export default async function CertificatesPage() {
                 <p className="text-xs text-on-surface-variant">Kode: {c.code}</p>
                 <p className="mt-1 flex items-center gap-1.5 text-xs text-on-surface-variant">
                   <Icon name="clock" size={12} />
-                  {formatDate(c.issuedAt.toISOString())}
+                  {formatCertificateDate(c.issuedAt)}
                 </p>
                 <Link
                   href={`/sertifikat/${c.id}`}
                   className="mt-4 inline-flex items-center gap-2 rounded-xl bg-surface-container px-3 py-2 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high"
                 >
-                  <Icon name="document" size={15} />
-                  Lihat sertifikat
+                  <Icon name="award" size={15} />
+                  Lihat Sertifikat
                 </Link>
               </CardContent>
             </Card>
