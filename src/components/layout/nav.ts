@@ -13,6 +13,8 @@ export const mahasiswaNav: NavItem[] = [
   { href: "/grafik", label: "Grafik Interaktif", icon: "monitoring" },
   { href: "/latihan", label: "Latihan Adaptif", icon: "target" },
   { href: "/materi", label: "Materi", icon: "book" },
+  { href: "/kelas", label: "Kelas Saya", icon: "users" },
+  { href: "/peringkat", label: "Peringkat", icon: "award" },
   { href: "/riwayat", label: "Riwayat Belajar", icon: "clock_undo" },
   { href: "/sertifikat", label: "Sertifikat", icon: "award" },
   { href: "/profil", label: "Profil", icon: "user" },
