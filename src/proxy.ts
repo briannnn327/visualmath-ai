@@ -8,9 +8,12 @@ const STUDENT_PATHS = [
   "/ai-explainer",
   "/grafik",
   "/latihan",
+  "/materi",
   "/riwayat",
   "/profil",
   "/sertifikat",
+  "/kelas",
+  "/peringkat",
 ];
 const GUEST_ONLY = ["/login", "/register"];
 const DOSEN_PATHS = ["/dosen"];
