@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { createSession } from "@/lib/db/session";
-import { createUser, findUserByEmail, recordActivity } from "@/lib/db/store";
+import {
+  createEmailVerificationToken,
+  createUser,
+  findUserByEmail,
+  recordActivity,
+} from "@/lib/db/store";
 import { registerSchema } from "@/lib/schemas";
 import { badRequest, toPublicUser } from "@/lib/server/api-auth";
-import { hashPassword } from "@/lib/server/password";
+import { appBaseUrl, emailVerificationEmail, sendEmail } from "@/lib/server/email";
+import { generateResetToken, hashPassword, hashResetToken } from "@/lib/server/password";
 import type { User } from "@/lib/types";
 import { uid } from "@/lib/utils";
 
@@ -38,6 +44,21 @@ export async function POST(request: Request) {
     nim: parsed.data.nim,
     prodi: parsed.data.prodi,
     color: role === "dosen" ? "#006a61" : "#3525cd",
+  });
+
+  /* Buat token verifikasi email dan kirim tautan (best-effort; email tidak wajib). */
+  const verifyToken = generateResetToken();
+  const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  await createEmailVerificationToken({
+    id: uid("ev-"),
+    userId: user.id,
+    tokenHash: hashResetToken(verifyToken),
+    expiresAt: verifyExpires,
+  });
+  const verifyUrl = `${appBaseUrl()}/verifikasi-email?token=${verifyToken}`;
+  await sendEmail({
+    to: user.email,
+    ...emailVerificationEmail(verifyUrl, user.name),
   });
 
   await recordActivity({

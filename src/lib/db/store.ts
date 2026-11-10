@@ -156,6 +156,50 @@ export async function deletePasswordResetsForUser(userId: string): Promise<void>
   await prisma.passwordResetToken.deleteMany({ where: { userId } });
 }
 
+/* ---------- Verifikasi email ---------- */
+export async function createEmailVerificationToken(data: {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  expiresAt: Date;
+}): Promise<void> {
+  await prisma.$transaction([
+    prisma.emailVerificationToken.deleteMany({ where: { userId: data.userId } }),
+    prisma.emailVerificationToken.create({
+      data: {
+        id: data.id,
+        userId: data.userId,
+        tokenHash: data.tokenHash,
+        expiresAt: data.expiresAt,
+      },
+    }),
+  ]);
+}
+
+export async function findEmailVerificationByHash(tokenHash: string): Promise<{
+  id: string;
+  userId: string;
+  expiresAt: Date;
+  usedAt: Date | null;
+} | null> {
+  const row = await prisma.emailVerificationToken.findUnique({ where: { tokenHash } });
+  if (!row) return null;
+  return { id: row.id, userId: row.userId, expiresAt: row.expiresAt, usedAt: row.usedAt };
+}
+
+export async function markEmailVerificationUsed(id: string): Promise<void> {
+  await prisma.emailVerificationToken.update({ where: { id }, data: { usedAt: new Date() } });
+}
+
+export async function markUserEmailVerified(userId: string): Promise<void> {
+  await prisma.user.update({ where: { id: userId }, data: { emailVerifiedAt: new Date() } });
+}
+
+export async function isEmailVerified(userId: string): Promise<boolean> {
+  const row = await prisma.user.findUnique({ where: { id: userId }, select: { emailVerifiedAt: true } });
+  return Boolean(row?.emailVerifiedAt);
+}
+
 /* ---------- Sesi (revocable) ---------- */
 
 export interface SessionRecord {

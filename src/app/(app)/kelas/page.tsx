@@ -1,5 +1,6 @@
 ﻿import Link from "next/link";
 import { redirect } from "next/navigation";
+import { LeaveClassButton } from "@/components/leave-class-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +34,9 @@ export default async function KelasPage() {
             <span className="grid h-14 w-14 place-items-center rounded-2xl bg-secondary-container text-on-secondary-container">
               <Icon name="users" size={26} />
             </span>
-            <h3 className="font-display text-lg font-bold text-on-surface">Belum bergabung kelas</h3>
+            <h3 className="font-display text-lg font-bold text-on-surface">
+              Belum bergabung kelas
+            </h3>
             <p className="max-w-md text-sm text-on-surface-variant">
               Minta kode kelas ke dosen pengampu, lalu gabung melalui halaman Profil.
             </p>
@@ -75,9 +78,12 @@ export default async function KelasPage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Detail Kelas</CardTitle>
-            <CardDescription>Identitas kelas tempat kamu belajar saat ini.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <div>
+              <CardTitle>Detail Kelas</CardTitle>
+              <CardDescription>Identitas kelas tempat kamu belajar saat ini.</CardDescription>
+            </div>
+            <LeaveClassButton />
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-outline-variant p-4">
@@ -183,7 +189,9 @@ export default async function KelasPage() {
             {sortedRoster.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-10 text-center">
                 <Icon name="users" size={22} />
-                <p className="text-sm text-on-surface-variant">Belum ada anggota lain di kelas ini.</p>
+                <p className="text-sm text-on-surface-variant">
+                  Belum ada anggota lain di kelas ini.
+                </p>
               </div>
             ) : (
               sortedRoster.map((row, index) => {

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { Progress } from "@/components/ui/progress";
@@ -19,7 +20,7 @@ function masteryColor(m: number): "success" | "warning" | "error" {
 }
 
 export default function DosenProgresPage() {
-  const { data: classes, isLoading } = useClasses();
+  const { data: classes } = useClasses();
   const [kelasId, setKelasId] = useState<string>("");
   const rosterQuery = useClassRoster(kelasId || null);
   const roster = useMemo(() => rosterQuery.data ?? [], [rosterQuery.data]);
@@ -44,7 +45,47 @@ export default function DosenProgresPage() {
     };
   }, [roster, topics]);
 
-  if (isLoading) return <SkeletonCard />;
+  const downloadCsv = () => {
+    const header = [
+      "Nama",
+      "NIM",
+      "Email",
+      "Rata-rata Penguasaan (%)",
+      "Total XP",
+      "Topik Dipelajari",
+      ...topics.map((t) => t.title),
+    ];
+    const rows = roster
+      .slice()
+      .sort((a, b) => b.avg - a.avg)
+      .map((row) => {
+        const masteryByTopic = new Map(row.rows.map((r) => [r.topic.id, r.mastery]));
+        return [
+          row.user.name,
+          row.user.nim ?? "",
+          row.user.email,
+          String(row.avg),
+          String(row.xp),
+          String(row.rows.length),
+          ...topics.map((t) => {
+            const m = masteryByTopic.get(t.id);
+            return m === undefined ? "" : String(m);
+          }),
+        ];
+      });
+
+    const csvEscape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const csv = [header, ...rows].map((r) => r.map(csvEscape).join(",")).join("\n");
+    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `progres-kelas-${kelasId || "semua"}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const classesList = classes ?? [];
 
@@ -130,6 +171,17 @@ export default function DosenProgresPage() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={downloadCsv}
+              disabled={roster.length === 0}
+            >
+              Unduh CSV
+            </Button>
           </div>
 
           <Card className="overflow-x-auto">

@@ -312,6 +312,12 @@ async function main() {
     await prisma.user.upsert({ where: { id: u.id }, update: u, create: u });
   }
 
+  /* Pengguna seed dianggap sudah terverifikasi email agar tidak muncul banner demo. */
+  await prisma.user.updateMany({
+    where: { id: { in: ["u-admin", "u-dosen1", "u-dosen2", ...students.map((s) => s.id)] } },
+    data: { emailVerifiedAt: new Date() },
+  });
+
   /* ---------- Topik ---------- */
   for (const t of topics) {
     const count = questions.filter((q) => q.topicId === t.id).length;

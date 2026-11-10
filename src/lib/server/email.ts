@@ -92,7 +92,15 @@ export function passwordResetEmail(resetUrl: string, name: string): Omit<EmailMe
   };
 }
 
-/** Template email pemberitahuan umum (mis. hasil kuis / sertifikat). */
+/** Template email verifikasi alamat email. */
+export function emailVerificationEmail(verifyUrl: string, name: string): Omit<EmailMessage, "to"> {
+  const safeName = name || "Pengguna";
+  return {
+    subject: "Verifikasi email VisualMath AI",
+    text: `Halo ${safeName},\n\nTerima kasih telah mendaftar. Buka tautan berikut untuk memverifikasi alamat emailmu:\n\n${verifyUrl}\n\nTautan berlaku 24 jam. Jika kamu tidak mendaftar, abaikan email ini.\n\nSalam,\nVisualMath AI`,
+    html: `<p>Halo <strong>${safeName}</strong>,</p><p>Terima kasih telah mendaftar. Klik tombol di bawah untuk memverifikasi alamat emailmu:</p><p><a href="${verifyUrl}" style="display:inline-block;padding:10px 18px;border-radius:10px;background:#6750A4;color:#fff;text-decoration:none;font-weight:600">Verifikasi Email</a></p><p>Tautan berlaku 24 jam. Jika kamu tidak mendaftar, abaikan email ini.</p><p>Salam,<br/>VisualMath AI</p>`,
+  };
+}
 export function notificationEmail(
   title: string,
   body: string,

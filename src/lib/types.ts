@@ -35,6 +35,7 @@ export interface User {
   kelasId?: KelasId;
   color: string;
   createdAt: string;
+  emailVerifiedAt?: string;
 }
 
 export type PublicUser = Omit<User, "password">;

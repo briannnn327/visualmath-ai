@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { EmailVerificationBanner } from "@/components/email-verification-banner";
 import { JoinClassCard } from "@/components/join-class-card";
 import { homeFor } from "@/components/layout/nav";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +70,8 @@ export default async function DashboardPage() {
           <Button icon="play">Mulai Latihan</Button>
         </Link>
       </div>
+
+      <EmailVerificationBanner verified={Boolean(user.emailVerifiedAt)} />
 
       {/* Rekomendasi */}
       {data.recommendation && (

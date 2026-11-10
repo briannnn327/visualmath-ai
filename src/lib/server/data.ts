@@ -306,6 +306,97 @@ export async function getKelasRoster(kelas: Kelas): Promise<RosterRow[]> {
     .filter((r): r is NonNullable<typeof r> => r !== null);
 }
 
+export interface LeaderboardEntry {
+  rank: number;
+  userId: string;
+  name: string;
+  nim: string | null;
+  color: string;
+  kelasId: string | null;
+  kelasNama: string | null;
+  avgMastery: number;
+  totalXp: number;
+  topicCount: number;
+}
+
+/** Peringkat global: seluruh mahasiswa, diurutkan berdasarkan rata-rata penguasaan lalu XP. */
+export async function getGlobalLeaderboard(): Promise<LeaderboardEntry[]> {
+  const [users, allProgress, allTopics, allKelas] = await Promise.all([
+    listUsers(),
+    listProgress(),
+    listTopics(),
+    listKelas(),
+  ]);
+  const topicById = new Map(allTopics.map((t) => [t.id, t]));
+  const kelasById = new Map(allKelas.map((k) => [k.id, k]));
+  const progressByUser = new Map<string, Progress[]>();
+  for (const p of allProgress) {
+    const arr = progressByUser.get(p.userId) ?? [];
+    arr.push(p);
+    progressByUser.set(p.userId, arr);
+  }
+
+  const entries: LeaderboardEntry[] = users
+    .filter((u) => u.role === "mahasiswa")
+    .map((u) => {
+      const rows = progressByUser.get(u.id) ?? [];
+      const valid = rows.filter((p) => topicById.has(p.topicId));
+      const avg = valid.length ? valid.reduce((s, p) => s + p.mastery, 0) / valid.length : 0;
+      const xp = rows.reduce((s, p) => s + p.xp, 0);
+      return {
+        rank: 0,
+        userId: u.id,
+        name: u.name,
+        nim: u.nim ?? null,
+        color: u.color,
+        kelasId: u.kelasId ?? null,
+        kelasNama: u.kelasId ? (kelasById.get(u.kelasId)?.nama ?? null) : null,
+        avgMastery: Math.round(avg * 10) / 10,
+        totalXp: xp,
+        topicCount: valid.length,
+      };
+    });
+
+  entries.sort((a, b) => {
+    if (b.avgMastery !== a.avgMastery) return b.avgMastery - a.avgMastery;
+    if (b.totalXp !== a.totalXp) return b.totalXp - a.totalXp;
+    return a.name.localeCompare(b.name);
+  });
+  entries.forEach((e, i) => {
+    e.rank = i + 1;
+  });
+  return entries;
+}
+
+/** Peringkat per kelas: anggota kelas, diurutkan berdasarkan rata-rata penguasaan lalu XP. */
+export async function getClassLeaderboard(kelasId: string): Promise<LeaderboardEntry[]> {
+  const kelas = await getKelasById(kelasId);
+  if (!kelas) return [];
+  const roster = await getKelasRoster(kelas);
+  const entries: LeaderboardEntry[] = roster.map((r) => ({
+    rank: 0,
+    userId: r.user.id,
+    name: r.user.name,
+    nim: r.user.nim ?? null,
+    color: r.user.color,
+    kelasId: kelas.id,
+    kelasNama: kelas.nama,
+    avgMastery: r.avg,
+    totalXp: r.xp,
+    topicCount: r.rows.length,
+  }));
+
+  entries.sort((a, b) => {
+    if (b.avgMastery !== a.avgMastery) return b.avgMastery - a.avgMastery;
+    if (b.totalXp !== a.totalXp) return b.totalXp - a.totalXp;
+    return a.name.localeCompare(b.name);
+  });
+  entries.forEach((e, i) => {
+    e.rank = i + 1;
+  });
+  return entries;
+}
+
 /* ---------------- Admin ---------------- */
 
 export async function getAdminData(): Promise<AdminDashboardData> {

@@ -36,6 +36,7 @@ export function mapUser(u: {
   kelasId: Nullable<string>;
   color: string;
   createdAt: Date;
+  emailVerifiedAt: Nullable<Date>;
 }): User {
   return {
     id: u.id as UserId,
@@ -48,6 +49,7 @@ export function mapUser(u: {
     kelasId: (u.kelasId as KelasId | null) ?? undefined,
     color: u.color,
     createdAt: u.createdAt.toISOString(),
+    emailVerifiedAt: u.emailVerifiedAt ? u.emailVerifiedAt.toISOString() : undefined,
   };
 }
 
