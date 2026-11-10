@@ -468,7 +468,7 @@ export function useSystemMetrics() {
       const { metrics } = await api.get<{ metrics: SystemMetrics }>("/api/system?q=metrics");
       return metrics;
     },
-    refetchInterval: 60_000,
+    refetchInterval: 30_000,
   });
 }
 
@@ -481,6 +481,7 @@ export function useSystemLogs(severity?: string) {
       );
       return logs;
     },
+    refetchInterval: 30_000,
   });
 }
 
@@ -629,7 +630,7 @@ export function useRateLimits() {
   return useQuery({
     queryKey: ["rate-limits"],
     queryFn: () => api.get<RateLimitInfo>("/api/admin/rate-limits"),
-    refetchInterval: 60_000,
+    refetchInterval: 30_000,
   });
 }
 

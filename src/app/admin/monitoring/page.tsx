@@ -103,9 +103,24 @@ const severityVariant: Record<string, "info" | "warning" | "error"> = {
 
 export default function AdminMonitoringPage() {
   const [severityLabel, setSeverityLabel] = useState<SeverityLabel>("Semua");
-  const { data: metrics, isLoading: metricsLoading } = useSystemMetrics();
-  const { data: logs, isLoading: logsLoading } = useSystemLogs(SEVERITY_MAP[severityLabel]);
-  const { data: rateLimits, isLoading: rateLimitsLoading } = useRateLimits();
+  const {
+    data: metrics,
+    isLoading: metricsLoading,
+    refetch: refetchMetrics,
+    dataUpdatedAt: metricsUpdatedAt,
+  } = useSystemMetrics();
+  const {
+    data: logs,
+    isLoading: logsLoading,
+    refetch: refetchLogs,
+    dataUpdatedAt: logsUpdatedAt,
+  } = useSystemLogs(SEVERITY_MAP[severityLabel]);
+  const {
+    data: rateLimits,
+    isLoading: rateLimitsLoading,
+    refetch: refetchRateLimits,
+    dataUpdatedAt: rateUpdatedAt,
+  } = useRateLimits();
 
   const ruleByBucket = new Map(rateLimits?.rules.map((r) => [r.bucket, r]) ?? []);
 
@@ -114,8 +129,27 @@ export default function AdminMonitoringPage() {
       <div>
         <h2 className="font-display text-2xl font-extrabold text-on-surface">Monitoring Sistem</h2>
         <p className="mt-1 text-sm text-on-surface-variant">
-          Pantau metrik performa dan log aktivitas sistem secara real-time.
+          Pantau metrik performa dan log aktivitas sistem. Data diperbarui otomatis setiap 30 detik.
         </p>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-on-surface-variant">
+            Terakhir diperbarui: {(() => {
+              const t = Math.max(metricsUpdatedAt ?? 0, logsUpdatedAt ?? 0, rateUpdatedAt ?? 0);
+              return t ? new Date(t).toLocaleTimeString("id-ID") : "—";
+            })()}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              void refetchMetrics();
+              void refetchLogs();
+              void refetchRateLimits();
+            }}
+          >
+            Muat ulang
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
