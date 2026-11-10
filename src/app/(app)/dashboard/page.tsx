@@ -230,7 +230,7 @@ export default async function DashboardPage() {
               },
               {
                 icon: "target" as IconName,
-                text: "Kerjakan 5 soal per sesi agar algoritma adaptif dapat menyesuaikan level.",
+                text: "Kerjakan 15 soal per sesi agar algoritma adaptif dapat menyesuaikan level.",
               },
               {
                 icon: "flame" as IconName,

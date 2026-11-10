@@ -12,6 +12,7 @@ import {
   recordActivity,
   sessionSummary,
 } from "@/lib/db/store";
+import { QUESTIONS_PER_SESSION } from "@/lib/exercise";
 import { apiUser, badRequest, unauthorized } from "@/lib/server/api-auth";
 import { certificateResultId } from "@/lib/server/certificate-id";
 import { notifyUser } from "@/lib/server/notify";
@@ -75,6 +76,14 @@ export async function POST(request: NextRequest) {
   );
   const score = total > 0 ? Math.round((correct / total) * 100) : 0;
   const topicTitle = topic?.title ?? "Latihan";
+  /* Sesi dianggap tuntas hanya bila 15 soal dijawab dan tidak dihentikan. */
+  const completed = parsed.data.finishReason !== "quit" && total >= QUESTIONS_PER_SESSION;
+  const sessionNote =
+    parsed.data.finishReason === "quit"
+      ? " (dihentikan)"
+      : completed
+        ? ""
+        : ` (belum tuntas: ${total}/${QUESTIONS_PER_SESSION} soal)`;
 
   if (total === 0) {
     return NextResponse.json({
@@ -91,7 +100,7 @@ export async function POST(request: NextRequest) {
     userId: user.id,
     kind: "quiz",
     title: `Kuis adaptif: ${topicTitle}`,
-    summary: `Skor ${score} · ${correct} dari ${total} benar · +${xp} XP${parsed.data.finishReason === "quit" ? " (dihentikan)" : ""}.`,
+    summary: `Skor ${score} · ${correct} dari ${total} benar · +${xp} XP${sessionNote}.`,
     score,
     xp,
   });
@@ -106,7 +115,7 @@ export async function POST(request: NextRequest) {
 
   /* Terbitkan sertifikat otomatis bila lulus ambang & sesi tuntas. */
   let certificateId: string | null = null;
-  const passed = isCertificateEligible(score, parsed.data.finishReason);
+  const passed = completed && isCertificateEligible(score, parsed.data.finishReason);
   if (passed && topic) {
     const resultId = certificateResultId(user.id, topic.id, parsed.data.sessionId);
     const sameResult = await getCertificateById(resultId);

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getTopicById, listQuestions } from "@/lib/db/store";
 import { difficultySchema } from "@/lib/schemas";
 import { apiUser, unauthorized } from "@/lib/server/api-auth";
+import { questionCandidates } from "@/lib/server/question-pool";
 import type { Difficulty } from "@/lib/types";
 import { randomInt } from "@/lib/utils";
 
@@ -25,19 +26,18 @@ export async function GET(request: NextRequest) {
   );
 
   const questions = await listQuestions();
-  const pool = questions.filter(
-    (q) => (!topicId || q.topicId === topicId) && q.difficulty === diff,
-  );
-  if (pool.length === 0) {
+  const candidates = questionCandidates(questions, {
+    topicId,
+    difficulty: diff,
+    excluded,
+  });
+  if (candidates.length === 0) {
     return NextResponse.json(
-      { question: null, error: "Belum ada soal untuk filter ini" },
+      { question: null, error: "Belum ada soal untuk topik ini" },
       { status: 200 },
     );
   }
 
-  /* Hindari soal yang sudah dijawab di sesi ini; bila habis, izinkan ulang. */
-  const unseen = pool.filter((q) => !excluded.has(q.id));
-  const candidates = unseen.length > 0 ? unseen : pool;
   const question = candidates[randomInt(candidates.length)];
   const topic = await getTopicById(question.topicId);
   const { expectedAnswer: _ea, ...safeQuestion } = question;

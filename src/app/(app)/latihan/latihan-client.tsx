@@ -12,6 +12,7 @@ import { Ring } from "@/components/ui/ring";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 import { useToastStore } from "@/components/ui/toast";
 import { CERTIFICATE_MIN_SCORE } from "@/lib/certificate";
+import { QUESTIONS_PER_SESSION } from "@/lib/exercise";
 import {
   type CompleteExerciseResult,
   type ExerciseAIResult,
@@ -28,7 +29,7 @@ import { useExerciseStore } from "@/lib/store/exerciseStore";
 import type { AnswerResult, Difficulty } from "@/lib/types";
 import { formatNumber, topicIcon } from "@/lib/utils";
 
-const GOAL = 5;
+const GOAL = QUESTIONS_PER_SESSION;
 
 /** Format detik menjadi mm:ss untuk timer sesi. */
 function clock(totalSeconds: number): string {
@@ -120,6 +121,8 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
   );
   /* Saat feedback tampil, pakai soal yang dibekukan agar tidak tertukar dengan soal berikutnya. */
   const question = lastFeedback?.question ?? questionQuery.data?.question ?? null;
+  /* Fallback lintas level bisa memilih soal beda level; tampilkan level soal aktual. */
+  const shownDifficulty = question?.difficulty ?? difficulty;
 
   function start(topicIdInput: string, title: string) {
     useExerciseStore.getState().start({ topicId: topicIdInput, topicTitle: title });
@@ -427,9 +430,9 @@ export function LatihanClient({ initialTopicId }: { initialTopicId?: string }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={diffBadge[difficulty]}>
+          <Badge variant={diffBadge[shownDifficulty]}>
             <Icon name="target" size={12} />
-            {difficultyLabel[difficulty]}
+            {difficultyLabel[shownDifficulty]}
           </Badge>
           <Badge variant="primary">
             <Icon name="star" size={12} />+{formatNumber(xp)} XP
