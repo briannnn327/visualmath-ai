@@ -61,6 +61,8 @@ export class ParseError extends Error {
 
 function preprocess(raw: string): string {
   let src = raw.toLowerCase().replace(/\s+/g, "");
+  // Buang prefiks persamaan yang sering disalin pengguna, mis. "f(x)=" atau "y=".
+  src = src.replace(/^[a-zA-Z_]+\([^)]*\)=/, "").replace(/^y=/, "");
   src = src.replace(/,/g, ".");
   src = src.replace(/π/g, "pi").replace(/∞/g, "infinity");
   // pecahan implisit dari unicode superscript sederhana
@@ -112,12 +114,23 @@ function tokenize(src: string): Token[] {
 function isImplicitMult(a: Token, b: Token): boolean {
   const aEnd = a.type === "num" || a.type === "rparen";
   const aVar = a.type === "ident" && !FUNCTION_NAMES.has(a.value) && !(a.value in CONSTANTS);
+  const aConst = a.type === "ident" && a.value in CONSTANTS;
   const bStart = b.type === "lparen";
   const bNum = b.type === "num";
   const bIdentFn = b.type === "ident" && FUNCTION_NAMES.has(b.value);
+  const bIdentAny = b.type === "ident";
 
+  // Angka langsung diikuti ident (variabel/konstanta/fungsi): 2x, 2pi, 3sin(x)
+  if (a.type === "num" && bIdentAny) return true;
+  // Variabel langsung diikuti kurung: x(x+1) -> x*(x+1)
+  if (aVar && bStart) return true;
+  // Konstanta langsung diikuti ident/angka/kurung: pi x, pi 2, e(x+1)
+  if (aConst && (bIdentAny || bNum || bStart)) return true;
+  // Kasus bawaan: num/rparen diikuti kurung/angka/fungsi
   if (aEnd && (bStart || bNum || bIdentFn)) return true;
+  // rparen diikuti ident non-fungsi: (x+1)y
   if (a.type === "rparen" && b.type === "ident" && !FUNCTION_NAMES.has(b.value)) return true;
+  // Variabel diikuti fungsi: x sin(x)
   if (aVar && bIdentFn) return true;
   return false;
 }
@@ -166,10 +179,14 @@ class Parser {
   }
 
   private expectEnd(): void {
-    if (this.pos < this.tokens.length)
+    if (this.pos < this.tokens.length) {
+      const t = this.tokens[this.pos];
+      const detail =
+        t.type === "ident" ? t.value : t.type === "num" ? String(t.value) : t.type === "op" ? t.value : t.type;
       throw new ParseError(
-        `Ada sisa ekspresi setelah "${this.tokens[this.pos].type}". Periksa operator, misalnya gunakan * eksplisit.`,
+        `Ekspresi tidak dapat diproses sepenuhnya (sisa: "${detail}"). Gunakan operator * eksplisit untuk perkalian, misalnya 2*x atau x*(x+1).`,
       );
+    }
   }
 
   get allVariables(): Set<string> {
@@ -699,7 +716,10 @@ export function pretty(n: MathNode): string {
       const leftP = precedence(n.left) < precedence(n) ? 1 : 0;
       const rightP = precedence(n.right) <= precedence(n) ? 1 : 0;
       const l = leftP ? `(${pretty(n.left)})` : pretty(n.left);
-      const r = rightP && n.op !== "*" ? `(${pretty(n.right)})` : pretty(n.right);
+      const r =
+        rightP && (n.op !== "*" || n.right.kind === "bin")
+          ? `(${pretty(n.right)})`
+          : pretty(n.right);
       return n.op === "*" ? `${l}${r}` : `${l}${opStr}${r}`;
     }
   }

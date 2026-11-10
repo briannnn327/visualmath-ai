@@ -90,7 +90,7 @@ export default function AIExplainerPage() {
                     id="expr"
                     value={expression}
                     onChange={(e) => setExpression(e.target.value)}
-                    placeholder="f(x) = 3x^2 + 2x - 1"
+                    placeholder="3x^2 + 2x - 1"
                     className="math-mono"
                     spellCheck={false}
                   />
