@@ -39,6 +39,9 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+      - name: Verify question bank (recompute numeric answers)
+        run: npm run verify:questions
+
       - name: Unit tests (Vitest + coverage)
         run: npm run test:coverage
 
