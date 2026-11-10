@@ -200,6 +200,8 @@ export interface AIOcrResult {
   confidence: number;
   /** Catatan singkat hasil pembacaan gambar. */
   note: string;
+  /** True bila gambar berisi soal/rumus matematika yang dapat dibaca. */
+  isMathProblem: boolean;
   model: string;
 }
 
@@ -212,10 +214,15 @@ export interface OcrTopicOption {
 const OCR_SCHEMA = {
   type: "object",
   properties: {
+    isMathProblem: {
+      type: "boolean",
+      description:
+        "true jika gambar berisi soal, rumus, atau ekspresi matematika yang dapat dibaca; false jika bukan (mis. foto orang, pemandangan, teks non-matematika, atau gambar buram/tidak jelas).",
+    },
     expression: {
       type: "string",
       description:
-        "Ekspresi matematika utama sebagai fungsi satu variabel dalam notasi teks biasa, mis. '3x^2 + 2x - 1'. Gunakan ^ untuk pangkat. Hanya berisi angka, huruf, + - * / ^ ( ) dan fungsi (sin, cos, ln, exp, sqrt). Kosongkan bila tidak ada ekspresi jelas.",
+        "Ekspresi matematika utama sebagai fungsi satu variabel dalam notasi teks biasa, mis. '3x^2 + 2x - 1'. Gunakan ^ untuk pangkat. Hanya berisi angka, huruf, + - * / ^ ( ) dan fungsi (sin, cos, ln, exp, sqrt). Kosongkan bila tidak ada ekspresi jelas atau bukan soal matematika.",
     },
     latex: { type: "string", description: "Ekspresi yang sama dalam LaTeX (opsional)." },
     topicSlug: {
@@ -224,9 +231,9 @@ const OCR_SCHEMA = {
         "Slug topik yang paling cocok dari daftar topik yang diberikan, atau string kosong.",
     },
     confidence: { type: "number", description: "Keyakinan pembacaan 0-100." },
-    note: { type: "string", description: "Catatan singkat bahasa Indonesia tentang isi soal." },
+    note: { type: "string", description: "Catatan singkat bahasa Indonesia tentang isi gambar." },
   },
-  required: ["expression"],
+  required: ["isMathProblem", "expression"],
 } as const;
 
 const DATA_URL_RE = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/;
@@ -240,10 +247,13 @@ function parseDataUrl(dataUrl: string): { mimeType: string; data: string } | nul
 function buildOcrPrompt(topics: OcrTopicOption[]): string {
   const list = topics.map((t) => `- ${t.slug}: ${t.title} — ${t.subtitle}`).join("\n");
   return [
-    "Baca gambar soal matematika berikut.",
+    "Periksa gambar yang diberikan dengan teliti.",
+    "Tentukan terlebih dahulu apakah gambar berisi SOAL atau RUMUS MATEMATIKA (ekspresi, fungsi, persamaan, integral, turunan, dll.).",
+    'Jika BUKAN gambar soal/rumus matematika (mis. foto orang, pemandangan, teks non-matematika, dokumen biasa, atau gambar buram/tidak jelas), set isMathProblem=false, expression="", dan note="Foto bukan rumus/soal matematika."',
+    "Jika YA, baca seluruh simbol dengan cermat (termasuk pangkat/superscript, subscript, pecahan, akar, huruf Yunani seperti π dan θ, dan fungsi trigonometri/logaritma).",
     "Ekstrak ekspresi matematika UTAMA menjadi notasi teks satu variabel yang dapat dihitung secara simbolik.",
     "PENTING: tulis perkalian dengan tanda '*' secara eksplisit, mis. '3*x^2 + 2*x - 1' (bukan '3x^2 + 2x - 1').",
-    "Jangan menyelesaikan soal; cukup tuliskan ekspresinya.",
+    "Gunakan ^ untuk pangkat. Jangan menyelesaikan soal; cukup tuliskan ekspresinya.",
     "Pilih topik paling relevan dari daftar berikut (jawab dengan slug-nya):",
     list || "(tidak ada daftar topik)",
     "Jawab dalam Bahasa Indonesia pada bagian catatan.",
@@ -251,6 +261,7 @@ function buildOcrPrompt(topics: OcrTopicOption[]): string {
 }
 
 interface RawOcr {
+  isMathProblem?: unknown;
   expression?: unknown;
   latex?: unknown;
   topicSlug?: unknown;
@@ -286,7 +297,9 @@ function parseOcr(text: string | undefined): Omit<AIOcrResult, "model"> | null {
       ? Math.min(100, Math.max(0, Math.round(data.confidence)))
       : 0;
   const note = typeof data.note === "string" ? data.note.trim() : "";
-  return { expression, latex, topicSlug, confidence, note };
+  const isMathProblem =
+    typeof data.isMathProblem === "boolean" ? data.isMathProblem : expression.length > 0;
+  return { expression, latex, topicSlug, confidence, note, isMathProblem };
 }
 
 /**
@@ -314,7 +327,7 @@ export async function ocrMathImage(
           ],
           config: {
             systemInstruction:
-              "Kamu adalah pembaca soal matematika. Ekstrak ekspresi dengan teliti, jangan menghitung.",
+              "Kamu adalah pembaca soal matematika. Tentukan apakah gambar berisi soal/rumus matematika; jika bukan, set isMathProblem=false. Ekstrak ekspresi dengan teliti, jangan menghitung.",
             temperature: 0,
             maxOutputTokens: clamp(config?.maxTokens ?? 1024, 256, 4096),
             responseMimeType: "application/json",

@@ -49,6 +49,23 @@ export async function POST(request: NextRequest) {
     return badRequest("Soal tidak dapat dibaca dari gambar. Coba foto yang lebih jelas.");
   }
 
+  if (!result.isMathProblem) {
+    await recordActivity({
+      userId: user.id,
+      actorName: user.name,
+      action: "ai.scan",
+      target: "bukan soal matematika",
+      severity: "info",
+    });
+    return NextResponse.json(
+      {
+        error:
+          "Foto yang diupload bukan rumus/soal matematika. Unggah foto soal atau rumus matematika.",
+      },
+      { status: 422 },
+    );
+  }
+
   const topic = result.topicSlug ? (topics.find((t) => t.slug === result.topicSlug) ?? null) : null;
 
   let analyzable = false;

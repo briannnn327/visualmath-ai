@@ -126,6 +126,7 @@ export interface ScanResult {
   topicTitle: string | null;
   model: string;
   analyzable: boolean;
+  isMathProblem?: boolean;
 }
 
 export function useScanSoal() {
