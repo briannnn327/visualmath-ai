@@ -1,0 +1,238 @@
+Folder PATH listing for volume DATA
+Volume serial number is 027D-5BC7
+D:.
+|   .env.example
+|   .gitignore
+|   AGENTS.md
+|   biome.json
+|   CLAUDE.md
+|   docker-compose.yml
+|   eslint.config.mjs
+|   next.config.ts
+|   package-lock.json
+|   package.json
+|   postcss.config.mjs
+|   prisma7.config.ts
+|   README.md
+|   sonar-project.properties
+|   struktur.txt
+|   tsconfig.json
+|   vitest.config.ts
+|   
++---.github
+|   \---workflows
+|           ci.yml
+|           
++---prisma
+|   |   schema.prisma
+|   |   seed.ts
+|   |   
+|   \---migrations
+|       |   migration_lock.toml
+|       |   
+|       +---20261010175034_init
+|       |       migration.sql
+|       |       
+|       +---20261011120000_pgvector_embedding
+|       |       migration.sql
+|       |       
+|       \---20261013120000_material_chunks
+|               migration.sql
+|               
++---public
+|       file.svg
+|       globe.svg
+|       next.svg
+|       vercel.svg
+|       window.svg
+|       
++---scripts
+|       backfill-embeddings.ts
+|       
+\---src
+    |   proxy.ts
+    |   
+    +---app
+    |   |   favicon.ico
+    |   |   globals.css
+    |   |   layout.tsx
+    |   |   page.tsx
+    |   |   
+    |   +---(app)
+    |   |   |   layout.tsx
+    |   |   |   
+    |   |   +---ai-explainer
+    |   |   |       page.tsx
+    |   |   |       
+    |   |   +---dashboard
+    |   |   |       page.tsx
+    |   |   |       
+    |   |   +---grafik
+    |   |   |       page.tsx
+    |   |   |       
+    |   |   +---latihan
+    |   |   |       latihan-client.tsx
+    |   |   |       page.tsx
+    |   |   |       
+    |   |   +---profil
+    |   |   |       page.tsx
+    |   |   |       
+    |   |   \---riwayat
+    |   |           page.tsx
+    |   |           
+    |   +---admin
+    |   |   |   layout.tsx
+    |   |   |   page.tsx
+    |   |   |   
+    |   |   +---konfigurasi
+    |   |   |       page.tsx
+    |   |   |       
+    |   |   +---monitoring
+    |   |   |       page.tsx
+    |   |   |       
+    |   |   \---pengguna
+    |   |           page.tsx
+    |   |           
+    |   +---api
+    |   |   +---ai-config
+    |   |   |       route.ts
+    |   |   |       
+    |   |   +---auth
+    |   |   |   +---login
+    |   |   |   |       route.ts
+    |   |   |   |       
+    |   |   |   +---logout
+    |   |   |   |       route.ts
+    |   |   |   |       
+    |   |   |   +---me
+    |   |   |   |       route.ts
+    |   |   |   |       
+    |   |   |   \---register
+    |   |   |           route.ts
+    |   |   |           
+    |   |   +---classes
+    |   |   |       route.ts
+    |   |   |       
+    |   |   +---exercises
+    |   |   |   |   route.ts
+    |   |   |   |   
+    |   |   |   +---answer
+    |   |   |   |       route.ts
+    |   |   |   |       
+    |   |   |   +---complete
+    |   |   |   |       route.ts
+    |   |   |   |       
+    |   |   |   +---explain
+    |   |   |   |       route.ts
+    |   |   |   |       
+    |   |   |   \---hint
+    |   |   |           route.ts
+    |   |   |           
+    |   |   +---formulas
+    |   |   |       route.ts
+    |   |   |       
+    |   |   +---materials
+    |   |   |   |   route.ts
+    |   |   |   |   
+    |   |   |   \---embeddings
+    |   |   |           route.ts
+    |   |   |           
+    |   |   +---profile
+    |   |   |       route.ts
+    |   |   |       
+    |   |   +---scan
+    |   |   |       route.ts
+    |   |   |       
+    |   |   +---system
+    |   |   |       route.ts
+    |   |   |       
+    |   |   +---topics
+    |   |   |       route.ts
+    |   |   |       
+    |   |   \---users
+    |   |           route.ts
+    |   |           
+    |   +---dosen
+    |   |   |   layout.tsx
+    |   |   |   page.tsx
+    |   |   |   
+    |   |   +---kelas
+    |   |   |       page.tsx
+    |   |   |       
+    |   |   +---materi
+    |   |   |       page.tsx
+    |   |   |       
+    |   |   \---progres
+    |   |           page.tsx
+    |   |           
+    |   +---login
+    |   |       page.tsx
+    |   |       
+    |   \---register
+    |           page.tsx
+    |           
+    +---components
+    |   |   brand.tsx
+    |   |   math-plot.tsx
+    |   |   providers.tsx
+    |   |   scan-soal.tsx
+    |   |   
+    |   +---layout
+    |   |       app-shell.tsx
+    |   |       nav.ts
+    |   |       
+    |   \---ui
+    |           badge.tsx
+    |           button.tsx
+    |           card.tsx
+    |           icon.tsx
+    |           input.tsx
+    |           modal.tsx
+    |           progress.tsx
+    |           ring.tsx
+    |           select.tsx
+    |           skeleton.tsx
+    |           toast.tsx
+    |           
+    \---lib
+        |   schemas.test.ts
+        |   schemas.ts
+        |   types.ts
+        |   utils.ts
+        |   
+        +---ai
+        |       gemini.test.ts
+        |       gemini.ts
+        |       rag-core.test.ts
+        |       rag-core.ts
+        |       rag.ts
+        |       
+        +---db
+        |       mappers.ts
+        |       prisma.ts
+        |       session.ts
+        |       store.ts
+        |       
+        +---hooks
+        |       queries.ts
+        |       
+        +---math
+        |       parser.test.ts
+        |       parser.ts
+        |       
+        +---server
+        |       api-auth.ts
+        |       data.ts
+        |       exercise-ai.ts
+        |       password.ts
+        |       rate-limit.test.ts
+        |       rate-limit.ts
+        |       
+        +---services
+        |       api.ts
+        |       
+        \---store
+                authStore.ts
+                exerciseStore.ts
+                uiStore.ts
+                
