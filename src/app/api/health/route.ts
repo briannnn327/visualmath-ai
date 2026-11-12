@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db/prisma";
+import { prisma, resolveDatabaseUrl } from "@/lib/db/prisma";
 
 /**
  * Health check ringan untuk memantau koneksi database.
@@ -51,18 +51,27 @@ export async function GET(request: Request) {
   }
 
   const ok = db === "up" && userTable === "ok";
+  const databaseUrl = resolveDatabaseUrl();
 
   const databaseEnvKeys = Object.keys(process.env)
     .filter((key) => /DATABASE|POSTGRES|NEON|PGHOST|PGDATABASE/i.test(key))
     .sort();
 
+  const databaseUrlSource = [
+    "DATABASE_URL",
+    "POSTGRES_PRISMA_URL",
+    "POSTGRES_URL",
+    "NEON_DATABASE_URL",
+  ].find((key) => Boolean(process.env[key]));
+
   return NextResponse.json(
     {
       status: ok ? "ok" : "degraded",
-      databaseUrlConfigured: Boolean(process.env.DATABASE_URL),
-      ...(detailed ? { database: maskDatabaseUrl(process.env.DATABASE_URL) } : {}),
+      databaseUrlConfigured: Boolean(databaseUrl),
       ...(detailed
         ? {
+            databaseUrlSource: databaseUrlSource ?? null,
+            database: maskDatabaseUrl(databaseUrl),
             databaseEnvKeys,
             sessionSecretConfigured: Boolean(
               process.env.SESSION_SECRET || process.env.VMA_SESSION_SECRET,

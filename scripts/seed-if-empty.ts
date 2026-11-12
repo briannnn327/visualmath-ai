@@ -9,14 +9,14 @@ import { config } from "dotenv";
 config({ path: [".env", ".env.local"] });
 
 async function main() {
-  if (!process.env.DATABASE_URL) {
-    console.log("[deploy] DATABASE_URL belum diset — seed dilewati.");
-    return;
-  }
-
-  const { prisma } = await import("@/lib/db/prisma");
+  const { prisma, resolveDatabaseUrl } = await import("@/lib/db/prisma");
 
   try {
+    if (!resolveDatabaseUrl()) {
+      console.log("[deploy] DATABASE_URL belum diset — seed dilewati.");
+      return;
+    }
+
     let count: number;
     try {
       count = await prisma.user.count();
