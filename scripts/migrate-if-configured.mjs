@@ -3,6 +3,11 @@ import { config } from "dotenv";
 
 config({ path: [".env", ".env.local"] });
 
+if (process.env.VMA_SKIP_DB_DEPLOY === "1") {
+  console.log("[deploy] VMA_SKIP_DB_DEPLOY=1 — migrasi database dilewati.");
+  process.exit(0);
+}
+
 const databaseUrl =
   process.env.DATABASE_URL_UNPOOLED ??
   process.env.POSTGRES_URL_NON_POOLING ??

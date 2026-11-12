@@ -9,6 +9,11 @@ import { config } from "dotenv";
 config({ path: [".env", ".env.local"] });
 
 async function main() {
+  if (process.env.VMA_SKIP_DB_DEPLOY === "1") {
+    console.log("[deploy] VMA_SKIP_DB_DEPLOY=1 — seed dilewati.");
+    return;
+  }
+
   const { prisma, resolveDatabaseUrl } = await import("@/lib/db/prisma");
 
   try {

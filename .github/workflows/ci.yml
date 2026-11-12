@@ -46,6 +46,8 @@ jobs:
         run: npm run test:coverage
 
       - name: Build
+        env:
+          VMA_SKIP_DB_DEPLOY: "1"
         run: npm run build
 
       - name: Upload coverage artifact
