@@ -52,11 +52,23 @@ export async function GET(request: Request) {
 
   const ok = db === "up" && userTable === "ok";
 
+  const databaseEnvKeys = Object.keys(process.env)
+    .filter((key) => /DATABASE|POSTGRES|NEON|PGHOST|PGDATABASE/i.test(key))
+    .sort();
+
   return NextResponse.json(
     {
       status: ok ? "ok" : "degraded",
       databaseUrlConfigured: Boolean(process.env.DATABASE_URL),
       ...(detailed ? { database: maskDatabaseUrl(process.env.DATABASE_URL) } : {}),
+      ...(detailed
+        ? {
+            databaseEnvKeys,
+            sessionSecretConfigured: Boolean(
+              process.env.SESSION_SECRET || process.env.VMA_SESSION_SECRET,
+            ),
+          }
+        : {}),
       db,
       userTable,
       ...(detailed && error ? { error } : {}),
