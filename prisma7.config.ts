@@ -12,8 +12,9 @@ export default defineConfig({
   datasource: {
     // Migrasi sebaiknya memakai koneksi langsung (non-pooling) bila tersedia.
     url:
-      process.env.DATABASE_URL ??
+      process.env.DATABASE_URL_UNPOOLED ??
       process.env.POSTGRES_URL_NON_POOLING ??
+      process.env.DATABASE_URL ??
       process.env.POSTGRES_PRISMA_URL ??
       process.env.POSTGRES_URL,
   },
