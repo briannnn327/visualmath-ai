@@ -182,7 +182,13 @@ class Parser {
     if (this.pos < this.tokens.length) {
       const t = this.tokens[this.pos];
       const detail =
-        t.type === "ident" ? t.value : t.type === "num" ? String(t.value) : t.type === "op" ? t.value : t.type;
+        t.type === "ident"
+          ? t.value
+          : t.type === "num"
+            ? String(t.value)
+            : t.type === "op"
+              ? t.value
+              : t.type;
       throw new ParseError(
         `Ekspresi tidak dapat diproses sepenuhnya (sisa: "${detail}"). Gunakan operator * eksplisit untuk perkalian, misalnya 2*x atau x*(x+1).`,
       );

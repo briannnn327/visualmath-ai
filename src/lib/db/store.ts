@@ -196,7 +196,10 @@ export async function markUserEmailVerified(userId: string): Promise<void> {
 }
 
 export async function isEmailVerified(userId: string): Promise<boolean> {
-  const row = await prisma.user.findUnique({ where: { id: userId }, select: { emailVerifiedAt: true } });
+  const row = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { emailVerifiedAt: true },
+  });
   return Boolean(row?.emailVerifiedAt);
 }
 
